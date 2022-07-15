@@ -11,13 +11,7 @@ import (
 
 var wg sync.WaitGroup
 
-func openP4k(fileDir string) []*zip.File {
-	r, err := zip.OpenReader(fileDir)
-	if err != nil {
-		println("unable to open p4k data file")
-	}
-	return r.File
-}
+const dataP4k = "Data.p4k"
 
 func buildFileNamesFile(filename string, files []*zip.File, start, end int) {
 	defer wg.Done()
@@ -34,23 +28,34 @@ func buildFileNamesFile(filename string, files []*zip.File, start, end int) {
 
 func GetP4kFilenames(gameDir, outputDir string) {
 
+	r, err := zip.OpenReader(filepath.Join(gameDir, dataP4k))
+	if err != nil {
+		fmt.Printf("Unable to open p4k data file: %s", err.Error())
+	}
+	defer r.Close()
+
 	MakeDir(outputDir)
-	files := openP4k(filepath.Join(gameDir, "Data.p4k"))
 
 	div := runtime.NumCPU()
-	fileCount := len(files)
-	interval := fileCount / div
-
+	fileCount := len(r.File)
 	filename := filepath.Join(outputDir, "P4k_filenames_")
-	for i := 0; i < div; i++ {
-		wg.Add(1)
-		if i == div-1 {
-			go buildFileNamesFile(fmt.Sprintf("%s%d.txt", filename, i+1), files, interval*i, fileCount)
-		} else {
-			go buildFileNamesFile(fmt.Sprintf("%s%d.txt", filename, i+1), files, interval*i, interval*(i+1))
+
+	if fileCount > 1000 {
+		interval := fileCount / div
+		for i := 0; i < div; i++ {
+			wg.Add(1)
+			if i == div-1 {
+				go buildFileNamesFile(fmt.Sprintf("%s%d.txt", filename, i+1), r.File, interval*i, fileCount)
+			} else {
+				go buildFileNamesFile(fmt.Sprintf("%s%d.txt", filename, i+1), r.File, interval*i, interval*(i+1))
+			}
 		}
+		wg.Wait()
+	} else {
+		wg.Add(1)
+		buildFileNamesFile(fmt.Sprintf("%s%d.txt", filename, 0), r.File, 0, fileCount)
 	}
-	wg.Wait()
+
 }
 
 func MakeDir(dir string) {
