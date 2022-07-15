@@ -39,18 +39,24 @@ func GetP4kFilenames(gameDir, outputDir string) {
 
 	div := runtime.NumCPU()
 	fileCount := len(files)
-	interval := fileCount / div
-
 	filename := filepath.Join(outputDir, "P4k_filenames_")
-	for i := 0; i < div; i++ {
-		wg.Add(1)
-		if i == div-1 {
-			go buildFileNamesFile(fmt.Sprintf("%s%d.txt", filename, i+1), files, interval*i, fileCount)
-		} else {
-			go buildFileNamesFile(fmt.Sprintf("%s%d.txt", filename, i+1), files, interval*i, interval*(i+1))
+
+	if fileCount > 1000 {
+		interval := fileCount / div
+		for i := 0; i < div; i++ {
+			wg.Add(1)
+			if i == div-1 {
+				go buildFileNamesFile(fmt.Sprintf("%s%d.txt", filename, i+1), files, interval*i, fileCount)
+			} else {
+				go buildFileNamesFile(fmt.Sprintf("%s%d.txt", filename, i+1), files, interval*i, interval*(i+1))
+			}
 		}
+		wg.Wait()
+	} else {
+		wg.Add(1)
+		buildFileNamesFile(fmt.Sprintf("%s%d.txt", filename, 0), files, 0, fileCount)
 	}
-	wg.Wait()
+
 }
 
 func MakeDir(dir string) {

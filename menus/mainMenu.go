@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ch3mz-za/SCUtil/common"
 	"github.com/inancgumus/screen"
 	log "github.com/sirupsen/logrus"
 )
@@ -43,7 +44,7 @@ func Main() MainFeature {
 			log.Error(err.Error())
 		}
 
-		switch strings.ToLower(strings.Replace(menuOption, "\r\n", "", -1)) {
+		switch strings.ToLower(common.CleanInput(menuOption)) {
 		case "1":
 			return MainFeatClearAllExceptP4k
 		case "2":

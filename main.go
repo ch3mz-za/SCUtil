@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ch3mz-za/SCUtil/common"
 	"github.com/ch3mz-za/SCUtil/menus"
 	p4k "github.com/ch3mz-za/SCUtil/p4kReader"
 	"github.com/inancgumus/screen"
@@ -100,7 +101,7 @@ func main() {
 				fmt.Printf("Invalid input: %s\n", err.Error())
 				menus.EnterToContinue()
 			}
-			phrase = strings.Replace(phrase, "\r\n", "", -1)
+			phrase = common.CleanInput(phrase)
 
 			results, err := p4k.FindInFiles(p4kFileNameDir, phrase)
 			if err != nil {
