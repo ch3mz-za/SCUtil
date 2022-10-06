@@ -1,4 +1,4 @@
-package menus
+package scu
 
 import (
 	"bufio"
@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ch3mz-za/SCUtil/pkg/common"
 	"github.com/inancgumus/screen"
 	log "github.com/sirupsen/logrus"
 )
@@ -37,7 +38,7 @@ func PtuOrLive() SubFeature {
 			log.Error(err.Error())
 		}
 
-		switch strings.ToLower(strings.Replace(menuOption, "\r\n", "", -1)) {
+		switch strings.ToLower(common.CleanInput(menuOption)) {
 		case "1", "live":
 			return subFeatLive
 		case "2", "ptu":
@@ -61,7 +62,7 @@ func YesOrNo() bool {
 			log.Error(err.Error())
 		}
 
-		switch strings.ToLower(strings.Replace(ans, "\r\n", "", -1)) {
+		switch strings.ToLower(common.CleanInput(ans)) {
 		case "y", "live":
 			return true
 		case "n", "ptu":
