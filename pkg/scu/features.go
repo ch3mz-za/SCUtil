@@ -67,13 +67,38 @@ func clearUserFolder() {
 		EnterToContinue()
 		return
 	}
+	exclusion := filepath.Join(userDir, "USER", "Client", "0", "Controls")
 	fmt.Printf("\nUser directory found: %s\n", userDir)
 
 	if YesOrNo() {
-		fmt.Println("Removing USER directory")
-		if err := os.RemoveAll(filepath.Join(userDir, "USER")); err != nil {
-			fmt.Printf("Unable to remove USER directory: %s\n", err.Error())
+		err := filepath.Walk(filepath.Join(userDir, "USER"),
+			func(path string, info os.FileInfo, err error) error {
+				if err != nil {
+					return err
+				}
+
+				// Check if file
+				if !info.IsDir() {
+
+					// Check prefix for exclusions
+					if strings.HasPrefix(path, exclusion) {
+						fmt.Println("Excluding: " + path)
+					} else {
+
+						if err := os.Remove(path); err != nil {
+							fmt.Printf("Unable to remove file: %s | error: %s\n", path, err.Error())
+						}
+						fmt.Println("Removing: " + path)
+					}
+				}
+				return nil
+			})
+		if err != nil {
+			fmt.Printf("Error removing USER directory: %s\n", err.Error())
 		}
+
+		fmt.Println("Cleared USER directory")
+
 	}
 	EnterToContinue()
 }

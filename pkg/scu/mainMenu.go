@@ -16,7 +16,7 @@ const (
 	p4kFileNameDir   string        = "./p4k_filenames"
 	p4kSearchResults string        = "./p4k_search_results"
 	twoSecondDur     time.Duration = 2 * time.Second
-	utilVersion      string        = "v1.2.0"
+	utilVersion      string        = "v1.2.1"
 )
 
 var (
