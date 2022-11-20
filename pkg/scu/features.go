@@ -59,7 +59,15 @@ func exists(path string) bool {
 	}
 }
 
-func clearUserFolder() {
+func clearUserFolerWithExclusions() {
+	clearUserFolder(true)
+}
+
+func clearUserFolerWithoutExclusions() {
+	clearUserFolder(false)
+}
+
+func clearUserFolder(exclusionsEnabled bool) {
 	gameVersion := PtuOrLive()
 	userDir, err := common.FindDir(RootDir, string(gameVersion))
 	if err != nil || userDir == "" {
@@ -77,19 +85,19 @@ func clearUserFolder() {
 					return err
 				}
 
-				// Check if file
 				if !info.IsDir() {
 
-					// Check prefix for exclusions
-					if strings.HasPrefix(path, exclusion) {
+					if exclusionsEnabled && strings.HasPrefix(path, exclusion) {
 						fmt.Println("Excluding: " + path)
-					} else {
-
-						if err := os.Remove(path); err != nil {
-							fmt.Printf("Unable to remove file: %s | error: %s\n", path, err.Error())
-						}
-						fmt.Println("Removing: " + path)
+						return nil
 					}
+
+					if err := os.Remove(path); err != nil {
+						fmt.Printf("Unable to remove file: %s | error: %s\n", path, err.Error())
+						return nil
+					}
+					fmt.Println("Removing: " + path)
+
 				}
 				return nil
 			})

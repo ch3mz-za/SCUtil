@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ch3mz-za/SCUtil/pkg/common"
@@ -29,19 +30,24 @@ type Feature struct {
 }
 
 type SCUtil struct {
-	MenuItems []*Feature
+	MenuItems    []*Feature
+	MaxMenuWidth int
 }
 
 func NewMenu() *SCUtil {
-	return &SCUtil{
+	scutil := &SCUtil{
 		MenuItems: []*Feature{
 			{
 				FeatureName: "Clear all data except p4k",
 				Execute:     clearAllDataExceptP4k,
 			},
 			{
-				FeatureName: "Clear user folder",
-				Execute:     clearUserFolder,
+				FeatureName: "Clear user folder (excluding control mappings)",
+				Execute:     clearUserFolerWithExclusions,
+			},
+			{
+				FeatureName: "Clear user folder (including control mappings)",
+				Execute:     clearUserFolerWithoutExclusions,
 			},
 			{
 				FeatureName: "Get all filenames in p4k",
@@ -52,11 +58,11 @@ func NewMenu() *SCUtil {
 				Execute:     mainFeatSearchP4kFilenames,
 			},
 			{
-				FeatureName: "Clear Star Citizen App Data",
+				FeatureName: "Clear Star Citizen App Data (Windows AppData)",
 				Execute:     clearStarCitizenAppData,
 			},
 			{
-				FeatureName: "Clear RSI Launcher data",
+				FeatureName: "Clear RSI Launcher data (Windows AppData)",
 				Execute:     clearRsiLauncherAppData,
 			},
 			{
@@ -65,6 +71,14 @@ func NewMenu() *SCUtil {
 			},
 		},
 	}
+
+	for _, item := range scutil.MenuItems {
+		if itemLen := len(item.FeatureName); itemLen > scutil.MaxMenuWidth {
+			scutil.MaxMenuWidth = itemLen
+		}
+	}
+
+	return scutil
 }
 
 func exit() {
@@ -81,7 +95,11 @@ func (m *SCUtil) Run() {
 		screen.Clear()
 		screen.MoveTopLeft()
 
-		fmt.Printf("SCUtil              [%s]\n----------------------------\n", utilVersion)
+		fmt.Printf("SCUtil%s[%s]\n%s\n",
+			strings.Repeat(" ", m.MaxMenuWidth-11),
+			utilVersion,
+			strings.Repeat("-", m.MaxMenuWidth+3))
+
 		for i, item := range m.MenuItems {
 			fmt.Printf("%d. %s\n", i+1, item.FeatureName)
 		}
