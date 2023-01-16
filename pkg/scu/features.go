@@ -9,17 +9,28 @@ import (
 	"time"
 
 	"github.com/ch3mz-za/SCUtil/pkg/common"
+	disp "github.com/ch3mz-za/SCUtil/pkg/display"
 	p4k "github.com/ch3mz-za/SCUtil/pkg/p4kReader"
 	"github.com/inancgumus/screen"
 )
 
-func clearAllDataExceptP4k() {
+const (
+	p4kFileNameDir   string        = "./p4k_filenames"
+	p4kSearchResults string        = "./p4k_search_results"
+	twoSecondDur     time.Duration = 2 * time.Second
+)
+
+var (
+	RootDir string = ""
+)
+
+func ClearAllDataExceptP4k() {
 
 	gameVersion := PtuOrLive()
 	gameDir, err := common.FindDir(RootDir, string(gameVersion))
 	if err != nil || gameDir == "" {
 		fmt.Println("Unable to find game directory")
-		EnterToContinue()
+		disp.EnterToContinue()
 		return
 	}
 
@@ -28,11 +39,11 @@ func clearAllDataExceptP4k() {
 	files, err := common.ListAllFilesAndDirs(gameDir)
 	if err != nil {
 		fmt.Println("Unable to list directories and files")
-		EnterToContinue()
+		disp.EnterToContinue()
 		return
 	}
 
-	if YesOrNo() {
+	if disp.YesOrNo() {
 		for _, f := range files {
 			if strings.HasSuffix(f.Name(), ".p4k") {
 				continue
@@ -47,7 +58,7 @@ func clearAllDataExceptP4k() {
 			println("Deleted: " + fPAth)
 
 		}
-		EnterToContinue()
+		disp.EnterToContinue()
 	}
 }
 
@@ -59,26 +70,26 @@ func exists(path string) bool {
 	}
 }
 
-func clearUserFolerWithExclusions() {
-	clearUserFolder(true)
+func ClearUserFolerWithExclusions() {
+	ClearUserFolder(true)
 }
 
-func clearUserFolerWithoutExclusions() {
-	clearUserFolder(false)
+func ClearUserFolerWithoutExclusions() {
+	ClearUserFolder(false)
 }
 
-func clearUserFolder(exclusionsEnabled bool) {
+func ClearUserFolder(exclusionsEnabled bool) {
 	gameVersion := PtuOrLive()
 	userDir, err := common.FindDir(RootDir, string(gameVersion))
 	if err != nil || userDir == "" {
 		fmt.Println("Unable to find game directory")
-		EnterToContinue()
+		disp.EnterToContinue()
 		return
 	}
 	exclusion := filepath.Join(userDir, "USER", "Client", "0", "Controls")
 	fmt.Printf("\nUser directory found: %s\n", userDir)
 
-	if YesOrNo() {
+	if disp.YesOrNo() {
 		err := filepath.Walk(filepath.Join(userDir, "USER"),
 			func(path string, info os.FileInfo, err error) error {
 				if err != nil {
@@ -108,23 +119,32 @@ func clearUserFolder(exclusionsEnabled bool) {
 		fmt.Println("Cleared USER directory")
 
 	}
-	EnterToContinue()
+	disp.EnterToContinue()
 }
 
-func getP4kFilenames() {
+func GetP4kFilenames() {
 	gameVersion := PtuOrLive()
-	userDir, err := common.FindDir(RootDir, string(gameVersion))
-	if err != nil || userDir == "" {
+	gameDir, err := common.FindDir(RootDir, string(gameVersion))
+	if err != nil || gameDir == "" {
 		fmt.Println("Unable to find game directory")
-		EnterToContinue()
+		disp.EnterToContinue()
 		return
 	}
 
-	fmt.Printf("\nUser directory found: %s\n", userDir)
-	p4k.GetP4kFilenames(userDir, p4kFileNameDir)
+	fmt.Printf("\nGame directory found: %s\n", gameDir)
+	p4k.GetP4kFilenames(gameDir, p4kFileNameDir)
+	disp.EnterToContinue()
 }
 
-func mainFeatSearchP4kFilenames() {
+func SearchP4kFilenames() {
+	gameVersion := PtuOrLive()
+	gameDir, err := common.FindDir(RootDir, string(gameVersion))
+	if err != nil || gameDir == "" {
+		fmt.Println("Unable to find game directory")
+		disp.EnterToContinue()
+		return
+	}
+
 	screen.Clear()
 	screen.MoveTopLeft()
 	fmt.Print("Please enter your search phrase\n-> ")
@@ -133,35 +153,32 @@ func mainFeatSearchP4kFilenames() {
 	phrase, err := reader.ReadString('\n')
 	if err != nil {
 		fmt.Printf("Invalid input: %s\n", err.Error())
-		EnterToContinue()
+		disp.EnterToContinue()
 	}
 	phrase = common.CleanInput(phrase)
 
-	results, err := p4k.FindInFiles(p4kFileNameDir, phrase)
+	results, err := p4k.SearchP4kFilenames(gameDir, phrase)
 	if err != nil {
 		fmt.Printf("Unable to search files: %s\n", err.Error())
-		EnterToContinue()
+		disp.EnterToContinue()
 	}
 
 	println()
-	for _, res := range results {
-		println(res)
-	}
 
 	filename := strings.ReplaceAll(phrase, "\\", "_") + ".txt"
 	p4k.MakeDir(p4kSearchResults)
 	p4k.WriteStringsToFile(filepath.Join(p4kSearchResults, filename), results)
-	EnterToContinue()
+	disp.EnterToContinue()
 }
 
-func clearStarCitizenAppData() {
+func ClearStarCitizenAppData() {
 	scAppDataDir := filepath.Join(common.UserHomeDir(), "AppData", "Local", "Star Citizen")
 	files, _ := common.ListAllFilesAndDirs(scAppDataDir)
 
 	if len(files) == 0 {
 		fmt.Println("Star Citizen AppData is empty")
 	} else {
-		if YesOrNo() {
+		if disp.YesOrNo() {
 			fmt.Println("Clearing Star Citizen AppData directory")
 			for _, f := range files {
 				filename := filepath.Join(scAppDataDir, f.Name())
@@ -174,10 +191,10 @@ func clearStarCitizenAppData() {
 			}
 		}
 	}
-	EnterToContinue()
+	disp.EnterToContinue()
 }
 
-func clearRsiLauncherAppData() {
+func ClearRsiLauncherAppData() {
 
 	for _, folder := range []string{"rsilauncher", "RSI Launcher"} {
 		rsiLauncherDir := filepath.Join(common.UserHomeDir(), "AppData", "Roaming", folder)
@@ -187,7 +204,7 @@ func clearRsiLauncherAppData() {
 			fmt.Printf("RSI Launcher AppData folder (%s) is empty!\n", folder)
 			time.Sleep(twoSecondDur)
 		} else {
-			if YesOrNo() {
+			if disp.YesOrNo() {
 				fmt.Println("Clearing Star Citizen AppData directory")
 				for _, f := range files {
 					filename := filepath.Join(rsiLauncherDir, f.Name())
@@ -201,5 +218,10 @@ func clearRsiLauncherAppData() {
 			}
 		}
 	}
-	EnterToContinue()
+	disp.EnterToContinue()
+}
+
+func Exit() {
+	disp.EnterToContinue()
+	os.Exit(0)
 }
