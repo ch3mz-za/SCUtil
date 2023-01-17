@@ -4,8 +4,14 @@ import (
 	"os"
 	"path/filepath"
 
+	disp "github.com/ch3mz-za/SCUtil/pkg/display"
 	"github.com/ch3mz-za/SCUtil/pkg/scu"
 	log "github.com/sirupsen/logrus"
+)
+
+const (
+	appTitle   string = "SCUtil"
+	appVersion string = "v1.2.2"
 )
 
 func main() {
@@ -24,6 +30,41 @@ func main() {
 		}
 	}
 
-	m := scu.NewMenu()
+	var menuItems = []*disp.MenuItem{
+		{
+			Title:   "Clear all data except p4k",
+			Execute: scu.ClearAllDataExceptP4k,
+		},
+		{
+			Title:   "Clear user folder (excluding control mappings)",
+			Execute: scu.ClearUserFolerWithExclusions,
+		},
+		{
+			Title:   "Clear user folder (including control mappings)",
+			Execute: scu.ClearUserFolerWithoutExclusions,
+		},
+		{
+			Title:   "Get all filenames in p4k",
+			Execute: scu.GetP4kFilenames,
+		},
+		{
+			Title:   "Search filenames in p4k",
+			Execute: scu.SearchP4kFilenames,
+		},
+		{
+			Title:   "Clear Star Citizen App Data (Windows AppData)",
+			Execute: scu.ClearStarCitizenAppData,
+		},
+		{
+			Title:   "Clear RSI Launcher data (Windows AppData)",
+			Execute: scu.ClearRsiLauncherAppData,
+		},
+		{
+			Title:   "Exit",
+			Execute: scu.Exit,
+		},
+	}
+
+	m := disp.NewMenu(appTitle, appVersion, menuItems)
 	m.Run()
 }

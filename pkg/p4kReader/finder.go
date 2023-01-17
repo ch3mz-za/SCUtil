@@ -1,34 +1,72 @@
 package p4k
 
 import (
+	"archive/zip"
 	"bufio"
+	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"sync"
 )
 
-func FindInFiles(filenameDir, phrase string) ([]string, error) {
-	files, err := ioutil.ReadDir(filenameDir)
+type SearchBorder struct {
+	Start int
+	Stop  int
+}
+
+func searchFilenameWorker(phrase string, files []*zip.File, border chan SearchBorder, results chan string, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for b := range border {
+		for _, fn := range files[b.Start:b.Stop] {
+			if strings.Contains(fn.Name, phrase) {
+				results <- fn.Name
+			}
+		}
+	}
+}
+
+func SearchP4kFilenames(gameDir, phrase string) ([]string, error) {
+	r, err := zip.OpenReader(filepath.Join(gameDir, dataP4k))
 	if err != nil {
-		return nil, err
+		fmt.Printf("Unable to open p4k data file: %s\n", err.Error())
 	}
 
-	resultsChan := make(chan string)
-	for _, f := range files {
+	results := make(chan string)
+	borders := make(chan SearchBorder)
+
+	var wg sync.WaitGroup
+	div := runtime.NumCPU()
+	for i := 0; i < div; i++ {
 		wg.Add(1)
-		go findInFile(phrase, filepath.Join(filenameDir, f.Name()), resultsChan)
+		go searchFilenameWorker(phrase, r.File, borders, results, &wg)
 	}
+
+	fileCount := len(r.File)
+	if fileCount > 1000 {
+		interval := fileCount / div
+		for i := 0; i < div; i++ {
+			if i == div-1 {
+				borders <- SearchBorder{Start: interval * i, Stop: fileCount}
+			} else {
+				borders <- SearchBorder{Start: interval * i, Stop: interval * (i + 1)}
+			}
+		}
+	} else {
+		borders <- SearchBorder{Start: 0, Stop: fileCount}
+	}
+	close(borders)
 
 	go func() {
 		wg.Wait()
-		close(resultsChan)
+		close(results)
 	}()
 
 	var searchResults []string
-	for res := range resultsChan {
+	for res := range results {
 		println(res)
 		searchResults = append(searchResults, res)
 	}
