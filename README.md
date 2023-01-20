@@ -40,15 +40,11 @@ Utility that does some useful things with your Star Citizen directory
 > This clears out logs and cached items that are typically found within > the RSI Launcher's App Data which sometimes prevent the game from
 > starting.
 
-## 2. Compiling & Run SCUtil
+## Running SCUtil
 
-On windows, with Golang, simply compile the code using :
+### 2.1 Executable
 
-```bash
-go build -o bin/SCUtil.exe main.go
-```
-
-Place `SCUtil.exe` within a folder located in one of the parent directories of your `Star Citizen` folder:
+Simply download the release and place place `SCUtil.exe` within a folder located in one of the parent directories of your `Star Citizen` folder:
 
 ```txt
 Your_Game_Dir
@@ -62,3 +58,17 @@ Your_Game_Dir
 │
 └───RSI Launcher
 ```
+
+From here you can run it and perform the tasks as required.
+
+### 2.2 Compile & Run SCUtil
+
+On windows, with latest Golang version, simply compile the code using:
+
+```bash
+go build -o bin/SCUtil.exe main.go
+```
+
+With the executable, follow the instructions in section `2.1`.
+
+
