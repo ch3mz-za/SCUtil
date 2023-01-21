@@ -11,7 +11,7 @@ import (
 
 const (
 	appTitle   string = "SCUtil"
-	appVersion string = "v1.2.2"
+	appVersion string = "v1.2.3"
 )
 
 func main() {

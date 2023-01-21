@@ -1,4 +1,4 @@
-package menus
+package display
 
 import (
 	"bufio"
@@ -12,11 +12,23 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func YesOrNo() bool {
+const YesNoStrLen int = 29
+
+func YesOrNo(title string, newScreen bool) bool {
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		screen.Clear()
-		screen.MoveTopLeft()
+
+		if title != "" {
+			var headerLen int
+			if headerLen = len(title); headerLen < YesNoStrLen {
+				headerLen = YesNoStrLen
+			}
+			printMenuHeader(title, headerLen)
+		} else if newScreen {
+			screen.Clear()
+			screen.MoveTopLeft()
+		}
+
 		fmt.Print("Do you want to continue (y/n)\n-> ")
 
 		ans, err := reader.ReadString('\n')
@@ -36,7 +48,17 @@ func YesOrNo() bool {
 	}
 }
 
+func printMenuHeader(title string, maxWidth int) {
+	ClearTerminal()
+	fmt.Printf("%s\n%s\n", title, strings.Repeat("-", maxWidth))
+}
+
 func EnterToContinue() {
 	fmt.Println("Press 'Enter' to continue...")
 	bufio.NewReader(os.Stdin).ReadBytes('\n')
+}
+
+func ClearTerminal() {
+	screen.Clear()
+	screen.MoveTopLeft()
 }
