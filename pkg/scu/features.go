@@ -11,7 +11,6 @@ import (
 	"github.com/ch3mz-za/SCUtil/pkg/common"
 	disp "github.com/ch3mz-za/SCUtil/pkg/display"
 	p4k "github.com/ch3mz-za/SCUtil/pkg/p4kReader"
-	"github.com/inancgumus/screen"
 )
 
 const (
@@ -25,9 +24,12 @@ var (
 )
 
 func ClearAllDataExceptP4k() {
+	choice := ptuOrLiveMenu.Run()
+	if choice == verBack {
+		return
+	}
 
-	gameVersion := PtuOrLive()
-	gameDir, err := common.FindDir(RootDir, string(gameVersion))
+	gameDir, err := common.FindDir(RootDir, string(choice))
 	if err != nil || gameDir == "" {
 		fmt.Println("Unable to find game directory")
 		disp.EnterToContinue()
@@ -43,7 +45,7 @@ func ClearAllDataExceptP4k() {
 		return
 	}
 
-	if disp.YesOrNo() {
+	if disp.YesOrNo("Clear all data except p4k file", true) {
 		for _, f := range files {
 			if strings.HasSuffix(f.Name(), ".p4k") {
 				continue
@@ -79,8 +81,11 @@ func ClearUserFolerWithoutExclusions() {
 }
 
 func ClearUserFolder(exclusionsEnabled bool) {
-	gameVersion := PtuOrLive()
-	userDir, err := common.FindDir(RootDir, string(gameVersion))
+	choice := ptuOrLiveMenu.Run()
+	if choice == verBack {
+		return
+	}
+	userDir, err := common.FindDir(RootDir, string(choice))
 	if err != nil || userDir == "" {
 		fmt.Println("Unable to find game directory")
 		disp.EnterToContinue()
@@ -89,7 +94,7 @@ func ClearUserFolder(exclusionsEnabled bool) {
 	exclusion := filepath.Join(userDir, "USER", "Client", "0", "Controls")
 	fmt.Printf("\nUser directory found: %s\n", userDir)
 
-	if disp.YesOrNo() {
+	if disp.YesOrNo("Clear user folder", true) {
 		err := filepath.Walk(filepath.Join(userDir, "USER"),
 			func(path string, info os.FileInfo, err error) error {
 				if err != nil {
@@ -123,8 +128,11 @@ func ClearUserFolder(exclusionsEnabled bool) {
 }
 
 func GetP4kFilenames() {
-	gameVersion := PtuOrLive()
-	gameDir, err := common.FindDir(RootDir, string(gameVersion))
+	choice := ptuOrLiveMenu.Run()
+	if choice == verBack {
+		return
+	}
+	gameDir, err := common.FindDir(RootDir, string(choice))
 	if err != nil || gameDir == "" {
 		fmt.Println("Unable to find game directory")
 		disp.EnterToContinue()
@@ -137,17 +145,19 @@ func GetP4kFilenames() {
 }
 
 func SearchP4kFilenames() {
-	gameVersion := PtuOrLive()
-	gameDir, err := common.FindDir(RootDir, string(gameVersion))
+	choice := ptuOrLiveMenu.Run()
+	if choice == verBack {
+		return
+	}
+	gameDir, err := common.FindDir(RootDir, string(choice))
 	if err != nil || gameDir == "" {
 		fmt.Println("Unable to find game directory")
 		disp.EnterToContinue()
 		return
 	}
 
-	screen.Clear()
-	screen.MoveTopLeft()
-	fmt.Print("Please enter your search phrase\n-> ")
+	disp.ClearTerminal()
+	fmt.Print("Please enter your search phrase\n0. Back\n-> ")
 
 	reader := bufio.NewReader(os.Stdin)
 	phrase, err := reader.ReadString('\n')
@@ -156,6 +166,9 @@ func SearchP4kFilenames() {
 		disp.EnterToContinue()
 	}
 	phrase = common.CleanInput(phrase)
+	if phrase == "0" {
+		return
+	}
 
 	results, err := p4k.SearchP4kFilenames(gameDir, phrase)
 	if err != nil {
@@ -172,23 +185,26 @@ func SearchP4kFilenames() {
 }
 
 func ClearStarCitizenAppData() {
+	if !disp.YesOrNo("Clear Star Citizen App Data", true) {
+		return
+	}
+
+	disp.ClearTerminal()
 	scAppDataDir := filepath.Join(common.UserHomeDir(), "AppData", "Local", "Star Citizen")
 	files, _ := common.ListAllFilesAndDirs(scAppDataDir)
 
 	if len(files) == 0 {
 		fmt.Println("Star Citizen AppData is empty")
 	} else {
-		if disp.YesOrNo() {
-			fmt.Println("Clearing Star Citizen AppData directory")
-			for _, f := range files {
-				filename := filepath.Join(scAppDataDir, f.Name())
-				err := os.RemoveAll(filename)
-				if err != nil {
-					fmt.Println("ERROR: " + err.Error())
-					continue
-				}
-				println("Deleted: " + filename)
+		fmt.Println("Clearing Star Citizen AppData directory")
+		for _, f := range files {
+			filename := filepath.Join(scAppDataDir, f.Name())
+			err := os.RemoveAll(filename)
+			if err != nil {
+				fmt.Println("ERROR: " + err.Error())
+				continue
 			}
+			println("Deleted: " + filename)
 		}
 	}
 	disp.EnterToContinue()
@@ -196,6 +212,11 @@ func ClearStarCitizenAppData() {
 
 func ClearRsiLauncherAppData() {
 
+	if !disp.YesOrNo("Clear RSI Launcher data", true) {
+		return
+	}
+
+	disp.ClearTerminal()
 	for _, folder := range []string{"rsilauncher", "RSI Launcher"} {
 		rsiLauncherDir := filepath.Join(common.UserHomeDir(), "AppData", "Roaming", folder)
 		files, _ := common.ListAllFilesAndDirs(rsiLauncherDir)
@@ -204,17 +225,16 @@ func ClearRsiLauncherAppData() {
 			fmt.Printf("RSI Launcher AppData folder (%s) is empty!\n", folder)
 			time.Sleep(twoSecondDur)
 		} else {
-			if disp.YesOrNo() {
-				fmt.Println("Clearing Star Citizen AppData directory")
-				for _, f := range files {
-					filename := filepath.Join(rsiLauncherDir, f.Name())
-					err := os.RemoveAll(filename)
-					if err != nil {
-						fmt.Println("ERROR: " + err.Error())
-						continue
-					}
-					println("Deleted: " + filename)
+
+			fmt.Println("Clearing Star Citizen AppData directory")
+			for _, f := range files {
+				filename := filepath.Join(rsiLauncherDir, f.Name())
+				err := os.RemoveAll(filename)
+				if err != nil {
+					fmt.Println("ERROR: " + err.Error())
+					continue
 				}
+				println("Deleted: " + filename)
 			}
 		}
 	}

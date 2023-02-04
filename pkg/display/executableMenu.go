@@ -1,4 +1,4 @@
-package menus
+package display
 
 import (
 	"bufio"
@@ -31,9 +31,10 @@ type Menu struct {
 func NewMenu(title, version string, menuItems []*MenuItem) *Menu {
 	menu := &Menu{MenuItems: menuItems}
 
+	menu.MaxMenuWidth = len(title)
 	for _, item := range menu.MenuItems {
-		if itemLen := len(item.Title); itemLen > menu.MaxMenuWidth {
-			menu.MaxMenuWidth = itemLen
+		if itemLen := len(item.Title); itemLen+menuNumberPad > menu.MaxMenuWidth {
+			menu.MaxMenuWidth = itemLen + menuNumberPad
 		}
 	}
 	menu.compileMenu(title, version)
@@ -46,9 +47,9 @@ func (m *Menu) compileMenu(title, version string) {
 	m.menuString += fmt.Sprintf(
 		"%s%s[%s]\n%s\n",
 		title,
-		strings.Repeat(" ", m.MaxMenuWidth-len(title)-versionLen+menuNumberPad),
+		strings.Repeat(" ", m.MaxMenuWidth-len(title)-versionLen),
 		version,
-		strings.Repeat("-", m.MaxMenuWidth+menuNumberPad),
+		strings.Repeat("-", m.MaxMenuWidth),
 	)
 
 	for i, item := range m.MenuItems {
