@@ -1,0 +1,43 @@
+{
+    "FixedFileInfo": {
+        "FileVersion": {
+            "Major": 1,
+            "Minor": 2,
+            "Patch": 4,
+            "Build": 0
+        },
+        "ProductVersion": {
+            "Major": 1,
+            "Minor": 2,
+            "Patch": 4,
+            "Build": 0
+        },
+        "FileFlagsMask": "3f",
+        "FileFlags ": "00",
+        "FileOS": "040004",
+        "FileType": "01",
+        "FileSubType": "00"
+    },
+    "StringFileInfo": {
+        "Comments": "",
+        "CompanyName": "Ch3mZ.tech",
+        "FileDescription": "Tool used to manage Star Citizen directory and files",
+        "FileVersion": "1.0.0",
+        "InternalName": "SCUtil",
+        "LegalCopyright": "",
+        "LegalTrademarks": "",
+        "OriginalFilename": "SCUtil.exe",
+        "PrivateBuild": "",
+        "ProductName": "SCUtil",
+        "ProductVersion": "v1.2.4",
+        "SpecialBuild": ""
+    },
+    "VarFileInfo": {
+        "Translation": {
+            "LangID": "0409",
+            "CharsetID": "04B0"
+        }
+    },
+    "IconPath": "resources/galaxy.ico",
+    "ManifestPath": ""
+}

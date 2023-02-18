@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -238,6 +239,51 @@ func ClearRsiLauncherAppData() {
 			}
 		}
 	}
+	disp.EnterToContinue()
+}
+
+func BackupControlMappings() {
+	choice := ptuOrLiveMenu.Run()
+	if choice == verBack {
+		return
+	}
+	gameDir, err := common.FindDir(RootDir, string(choice))
+	if err != nil || gameDir == "" {
+		fmt.Println("Unable to find game directory")
+		disp.EnterToContinue()
+		return
+	}
+
+	disp.ClearTerminal()
+	fmt.Printf("\nGame directory found: %s\n", gameDir)
+
+	mappingsDir := filepath.Join(gameDir, "USER", "Client", "0", "Controls", "Mappings")
+	files, err := os.ReadDir(mappingsDir)
+	if err != nil {
+		fmt.Println("Unable to open Mappings directory")
+		disp.EnterToContinue()
+	}
+
+	controlMapCount := 0
+	for _, f := range files {
+		if strings.HasSuffix(strings.ToLower(f.Name()), ".xml") {
+			controlMapCount++
+			backupFileName := strings.TrimSuffix(f.Name(), ".xml") + "-" + time.Now().Format("2006.01.02-15.04.05") + ".xml"
+
+			if err := common.CopyFile(
+				path.Join(mappingsDir, f.Name()),   // src
+				path.Join(gameDir, backupFileName), // dst
+			); err != nil {
+				fmt.Printf("Backup error: %s\n", err.Error())
+			} else {
+				fmt.Printf("Mapping backed up: %s\n", backupFileName)
+			}
+		}
+	}
+	if controlMapCount == 0 {
+		fmt.Println("No control mappings found")
+	}
+
 	disp.EnterToContinue()
 }
 
