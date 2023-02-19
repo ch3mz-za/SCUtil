@@ -1,3 +1,4 @@
+//go:generate goversioninfo
 package main
 
 import (
@@ -11,7 +12,7 @@ import (
 
 const (
 	appTitle   string = "SCUtil"
-	appVersion string = "v1.2.3"
+	appVersion string = "v1.2.4"
 )
 
 func main() {
@@ -58,6 +59,10 @@ func main() {
 		{
 			Title:   "Clear RSI Launcher data (Windows AppData)",
 			Execute: scu.ClearRsiLauncherAppData,
+		},
+		{
+			Title:   "Backup control mappings",
+			Execute: scu.BackupControlMappings,
 		},
 		{
 			Title:   "Exit",

@@ -40,6 +40,10 @@ Utility that does some useful things with your Star Citizen directory
 > This clears out logs and cached items that are typically found within > the RSI Launcher's App Data which sometimes prevent the game from
 > starting.
 
+### 1.8. Backup control mapping
+
+> This does a backup of your game's custom control mappings.
+
 ## 2. Running SCUtil
 
 ### 2.1. Executable

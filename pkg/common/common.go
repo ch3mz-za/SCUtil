@@ -1,6 +1,7 @@
 package common
 
 import (
+	"io"
 	"io/fs"
 	"io/ioutil"
 	"os"
@@ -63,4 +64,24 @@ func ProgressBar(maxBarLen int64, progress chan int, wg *sync.WaitGroup) {
 	for p := range progress {
 		bar.Add(p)
 	}
+}
+
+func CopyFile(src string, dst string) error {
+	fin, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer fin.Close()
+
+	fout, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer fout.Close()
+
+	_, err = io.Copy(fout, fin)
+	if err != nil {
+		return err
+	}
+	return nil
 }
