@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -270,9 +269,19 @@ func BackupControlMappings() {
 			controlMapCount++
 			backupFileName := strings.TrimSuffix(f.Name(), ".xml") + "-" + time.Now().Format("2006.01.02-15.04.05") + ".xml"
 
+			backupDir := filepath.Join(filepath.Dir(filepath.Dir(gameDir)), "BACKUPS", string(choice))
+			if _, err := os.Stat(backupDir); os.IsNotExist(err) {
+				if err := os.MkdirAll(backupDir, 0755); err != nil {
+					fmt.Println("Unable to create backup directory")
+					disp.EnterToContinue()
+					return
+				}
+				println("Backup directory created: " + backupDir)
+			}
+
 			if err := common.CopyFile(
-				path.Join(mappingsDir, f.Name()),   // src
-				path.Join(gameDir, backupFileName), // dst
+				filepath.Join(mappingsDir, f.Name()),     // src
+				filepath.Join(backupDir, backupFileName), // dst
 			); err != nil {
 				fmt.Printf("Backup error: %s\n", err.Error())
 			} else {
