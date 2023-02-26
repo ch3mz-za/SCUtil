@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ch3mz-za/SCUtil/pkg/common"
+	"github.com/ch3mz-za/SCUtil/pkg/display"
 	disp "github.com/ch3mz-za/SCUtil/pkg/display"
 	p4k "github.com/ch3mz-za/SCUtil/pkg/p4kReader"
 )
@@ -16,6 +17,7 @@ import (
 const (
 	p4kFileNameDir   string        = "./p4k_filenames"
 	p4kSearchResults string        = "./p4k_search_results"
+	ctrlMapFileExt   string        = ".xml"
 	twoSecondDur     time.Duration = 2 * time.Second
 )
 
@@ -255,44 +257,107 @@ func BackupControlMappings() {
 
 	disp.ClearTerminal()
 	fmt.Printf("\nGame directory found: %s\n", gameDir)
-
 	mappingsDir := filepath.Join(gameDir, "USER", "Client", "0", "Controls", "Mappings")
-	files, err := os.ReadDir(mappingsDir)
-	if err != nil {
-		fmt.Println("Unable to open Mappings directory")
-		disp.EnterToContinue()
-	}
+	backupDir := filepath.Join(filepath.Dir(filepath.Dir(gameDir)), "BACKUPS", string(choice))
 
-	controlMapCount := 0
-	for _, f := range files {
-		if strings.HasSuffix(strings.ToLower(f.Name()), ".xml") {
-			controlMapCount++
-			backupFileName := strings.TrimSuffix(f.Name(), ".xml") + "-" + time.Now().Format("2006.01.02-15.04.05") + ".xml"
+	var backupOpt disp.MenuStringOption = "Backup"
+	var restoreOpt disp.MenuStringOption = "Restore"
 
-			backupDir := filepath.Join(filepath.Dir(filepath.Dir(gameDir)), "BACKUPS", string(choice))
-			if _, err := os.Stat(backupDir); os.IsNotExist(err) {
-				if err := os.MkdirAll(backupDir, 0755); err != nil {
-					fmt.Println("Unable to create backup directory")
-					disp.EnterToContinue()
-					return
+	option := display.NewStringOptionMenu("Control Mappings", []disp.MenuStringOption{backupOpt, restoreOpt}).Run()
+	switch option {
+
+	// Backup control mappings
+	case backupOpt:
+
+		files, err := os.ReadDir(mappingsDir)
+		if err != nil {
+			fmt.Println("Unable to open mappings directory")
+			disp.EnterToContinue()
+		}
+
+		controlMapCount := 0
+		for _, f := range files {
+			if strings.HasSuffix(strings.ToLower(f.Name()), ".xml") {
+				controlMapCount++
+				backupFileName := strings.TrimSuffix(f.Name(), ".xml") + "-" + time.Now().Format("2006.01.02-15.04.05") + ".xml"
+
+				if _, err := os.Stat(backupDir); os.IsNotExist(err) {
+					if err := os.MkdirAll(backupDir, 0755); err != nil {
+						fmt.Println("Unable to create backup directory")
+						disp.EnterToContinue()
+						return
+					}
+					println("Backup directory created: " + backupDir)
 				}
-				println("Backup directory created: " + backupDir)
-			}
 
-			if err := common.CopyFile(
-				filepath.Join(mappingsDir, f.Name()),     // src
-				filepath.Join(backupDir, backupFileName), // dst
-			); err != nil {
-				fmt.Printf("Backup error: %s\n", err.Error())
-			} else {
-				fmt.Printf("Mapping backed up: %s\n", backupFileName)
+				if err := common.CopyFile(
+					filepath.Join(mappingsDir, f.Name()),     // src
+					filepath.Join(backupDir, backupFileName), // dst
+				); err != nil {
+					fmt.Printf("Backup error: %s\n", err.Error())
+				} else {
+					fmt.Printf("Mapping backed up: %s\n", backupFileName)
+				}
 			}
 		}
-	}
-	if controlMapCount == 0 {
-		fmt.Println("No control mappings found")
-	}
+		if controlMapCount == 0 {
+			fmt.Println("No control mappings found")
+			disp.EnterToContinue()
+			return
+		}
 
+	// Restore control mappings
+	case restoreOpt:
+		files, err := os.ReadDir(backupDir)
+		if err != nil {
+			fmt.Println("Unable to open backup directory: " + err.Error())
+			disp.EnterToContinue()
+			return
+		}
+
+		var restoreMenuOpts []disp.MenuStringOption
+		controlMapCount := 0
+		for _, f := range files {
+			if strings.HasSuffix(strings.ToLower(f.Name()), ctrlMapFileExt) {
+				controlMapCount++
+				restoreMenuOpts = append(restoreMenuOpts, disp.MenuStringOption(f.Name()))
+			}
+		}
+
+		if controlMapCount == 0 {
+			fmt.Println("No control mappings found")
+			disp.EnterToContinue()
+			return
+		}
+
+		fileToRestore := disp.NewStringOptionMenu("Select Control Mapping to Restore", restoreMenuOpts).Run()
+
+		if _, err := os.Stat(mappingsDir); os.IsNotExist(err) {
+			if err := os.MkdirAll(mappingsDir, 0755); err != nil {
+				fmt.Println("Unable to create control mappings directory")
+				disp.EnterToContinue()
+				return
+			}
+			println("Control mappings directory created: " + mappingsDir)
+		}
+
+		restoreFileName := string(fileToRestore)
+		split := strings.Split(strings.TrimSuffix(restoreFileName, ctrlMapFileExt), "-")
+
+		// Remove backup timestamp
+		if splitCnt := len(split); splitCnt >= 3 {
+			restoreFileName = strings.Join(split[:splitCnt-2], "-") + ctrlMapFileExt
+		}
+
+		if err := common.CopyFile(
+			filepath.Join(backupDir, string(fileToRestore)), // src
+			filepath.Join(mappingsDir, restoreFileName),     // dst
+		); err != nil {
+			fmt.Printf("Restore error: %s\n", err.Error())
+		} else {
+			fmt.Printf("Control mapping restored: %s\n", string(fileToRestore))
+		}
+	}
 	disp.EnterToContinue()
 }
 
