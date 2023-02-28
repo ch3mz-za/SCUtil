@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/ch3mz-za/SCUtil/pkg/common"
-	"github.com/ch3mz-za/SCUtil/pkg/display"
 	disp "github.com/ch3mz-za/SCUtil/pkg/display"
 	p4k "github.com/ch3mz-za/SCUtil/pkg/p4kReader"
 )
@@ -19,6 +18,12 @@ const (
 	p4kSearchResults string        = "./p4k_search_results"
 	ctrlMapFileExt   string        = ".xml"
 	twoSecondDur     time.Duration = 2 * time.Second
+
+	// Directories
+	controlMappingsDir       string = "USER/Client/0/Controls/Mappings"
+	controlMappingsBackupDir string = "BACKUPS/ControlMappings"
+	screenshotsDir           string = "ScreenShots"
+	screenshotsBackupDir     string = "BACKUPS/Screenshots"
 )
 
 var (
@@ -27,7 +32,7 @@ var (
 
 func ClearAllDataExceptP4k() {
 	choice := ptuOrLiveMenu.Run()
-	if choice == verBack {
+	if choice == optBack {
 		return
 	}
 
@@ -84,7 +89,7 @@ func ClearUserFolerWithoutExclusions() {
 
 func ClearUserFolder(exclusionsEnabled bool) {
 	choice := ptuOrLiveMenu.Run()
-	if choice == verBack {
+	if choice == optBack {
 		return
 	}
 	userDir, err := common.FindDir(RootDir, string(choice))
@@ -131,7 +136,7 @@ func ClearUserFolder(exclusionsEnabled bool) {
 
 func GetP4kFilenames() {
 	choice := ptuOrLiveMenu.Run()
-	if choice == verBack {
+	if choice == optBack {
 		return
 	}
 	gameDir, err := common.FindDir(RootDir, string(choice))
@@ -148,7 +153,7 @@ func GetP4kFilenames() {
 
 func SearchP4kFilenames() {
 	choice := ptuOrLiveMenu.Run()
-	if choice == verBack {
+	if choice == optBack {
 		return
 	}
 	gameDir, err := common.FindDir(RootDir, string(choice))
@@ -243,9 +248,9 @@ func ClearRsiLauncherAppData() {
 	disp.EnterToContinue()
 }
 
-func BackupControlMappings() {
+func BackupOrRestoreControlMappings() {
 	choice := ptuOrLiveMenu.Run()
-	if choice == verBack {
+	if choice == optBack {
 		return
 	}
 	gameDir, err := common.FindDir(RootDir, string(choice))
@@ -257,57 +262,22 @@ func BackupControlMappings() {
 
 	disp.ClearTerminal()
 	fmt.Printf("\nGame directory found: %s\n", gameDir)
-	mappingsDir := filepath.Join(gameDir, "USER", "Client", "0", "Controls", "Mappings")
-	backupDir := filepath.Join(filepath.Dir(filepath.Dir(gameDir)), "BACKUPS", string(choice))
+	mappingsDir := filepath.Join(gameDir, controlMappingsDir)
+	backupDir := filepath.Join(filepath.Dir(filepath.Dir(gameDir)), controlMappingsBackupDir, string(choice))
 
 	var backupOpt disp.MenuStringOption = "Backup"
 	var restoreOpt disp.MenuStringOption = "Restore"
 
-	option := display.NewStringOptionMenu("Control Mappings", []disp.MenuStringOption{backupOpt, restoreOpt}).Run()
+	option := disp.NewStringOptionMenu("Control Mappings", []disp.MenuStringOption{backupOpt, restoreOpt}).Run()
 	switch option {
 
 	// Backup control mappings
 	case backupOpt:
-
-		files, err := os.ReadDir(mappingsDir)
-		if err != nil {
-			fmt.Println("Unable to open mappings directory")
-			disp.EnterToContinue()
-		}
-
-		controlMapCount := 0
-		for _, f := range files {
-			if strings.HasSuffix(strings.ToLower(f.Name()), ".xml") {
-				controlMapCount++
-				backupFileName := strings.TrimSuffix(f.Name(), ".xml") + "-" + time.Now().Format("2006.01.02-15.04.05") + ".xml"
-
-				if _, err := os.Stat(backupDir); os.IsNotExist(err) {
-					if err := os.MkdirAll(backupDir, 0755); err != nil {
-						fmt.Println("Unable to create backup directory")
-						disp.EnterToContinue()
-						return
-					}
-					println("Backup directory created: " + backupDir)
-				}
-
-				if err := common.CopyFile(
-					filepath.Join(mappingsDir, f.Name()),     // src
-					filepath.Join(backupDir, backupFileName), // dst
-				); err != nil {
-					fmt.Printf("Backup error: %s\n", err.Error())
-				} else {
-					fmt.Printf("Mapping backed up: %s\n", backupFileName)
-				}
-			}
-		}
-		if controlMapCount == 0 {
-			fmt.Println("No control mappings found")
-			disp.EnterToContinue()
-			return
-		}
+		backupFiles(mappingsDir, backupDir, true, ".xml")
 
 	// Restore control mappings
 	case restoreOpt:
+
 		files, err := os.ReadDir(backupDir)
 		if err != nil {
 			fmt.Println("Unable to open backup directory: " + err.Error())
@@ -316,48 +286,49 @@ func BackupControlMappings() {
 		}
 
 		var restoreMenuOpts []disp.MenuStringOption
-		controlMapCount := 0
 		for _, f := range files {
 			if strings.HasSuffix(strings.ToLower(f.Name()), ctrlMapFileExt) {
-				controlMapCount++
 				restoreMenuOpts = append(restoreMenuOpts, disp.MenuStringOption(f.Name()))
 			}
 		}
 
-		if controlMapCount == 0 {
-			fmt.Println("No control mappings found")
+		if len(restoreMenuOpts) == 0 {
+			fmt.Println("No objects found for restoration")
 			disp.EnterToContinue()
 			return
 		}
 
-		fileToRestore := disp.NewStringOptionMenu("Select Control Mapping to Restore", restoreMenuOpts).Run()
-
-		if _, err := os.Stat(mappingsDir); os.IsNotExist(err) {
-			if err := os.MkdirAll(mappingsDir, 0755); err != nil {
-				fmt.Println("Unable to create control mappings directory")
-				disp.EnterToContinue()
-				return
-			}
-			println("Control mappings directory created: " + mappingsDir)
+		restoreMenuOpts = append(restoreMenuOpts, optBack)
+		menuOption := disp.NewStringOptionMenu("Select file to restore", restoreMenuOpts).Run()
+		if menuOption == optBack {
+			return
 		}
 
-		restoreFileName := string(fileToRestore)
-		split := strings.Split(strings.TrimSuffix(restoreFileName, ctrlMapFileExt), "-")
-
-		// Remove backup timestamp
-		if splitCnt := len(split); splitCnt >= 3 {
-			restoreFileName = strings.Join(split[:splitCnt-2], "-") + ctrlMapFileExt
-		}
-
-		if err := common.CopyFile(
-			filepath.Join(backupDir, string(fileToRestore)), // src
-			filepath.Join(mappingsDir, restoreFileName),     // dst
-		); err != nil {
-			fmt.Printf("Restore error: %s\n", err.Error())
-		} else {
-			fmt.Printf("Control mapping restored: %s\n", string(fileToRestore))
-		}
+		restoreFiles(backupDir, mappingsDir, string(menuOption))
 	}
+	disp.EnterToContinue()
+}
+
+func BackupScreenshots() {
+	choice := ptuOrLiveMenu.Run()
+	if choice == optBack {
+		return
+	}
+	gameDir, err := common.FindDir(RootDir, string(choice))
+	if err != nil || gameDir == "" {
+		fmt.Println("Unable to find game directory")
+		disp.EnterToContinue()
+		return
+	}
+
+	disp.ClearTerminal()
+	fmt.Printf("\nGame directory found: %s\n", gameDir)
+
+	screenshotDir := filepath.Join(gameDir, screenshotsDir)
+	backupDir := filepath.Join(filepath.Dir(filepath.Dir(gameDir)), screenshotsBackupDir, string(choice))
+
+	backupFiles(screenshotDir, backupDir, false, ".jpg")
+
 	disp.EnterToContinue()
 }
 
