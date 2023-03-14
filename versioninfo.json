@@ -2,14 +2,14 @@
     "FixedFileInfo": {
         "FileVersion": {
             "Major": 1,
-            "Minor": 2,
-            "Patch": 5,
+            "Minor": 3,
+            "Patch": 0,
             "Build": 0
         },
         "ProductVersion": {
             "Major": 1,
-            "Minor": 2,
-            "Patch": 5,
+            "Minor": 3,
+            "Patch": 0,
             "Build": 0
         },
         "FileFlagsMask": "3f",
@@ -29,7 +29,7 @@
         "OriginalFilename": "SCUtil.exe",
         "PrivateBuild": "",
         "ProductName": "SCUtil",
-        "ProductVersion": "v1.2.5",
+        "ProductVersion": "v1.3.0",
         "SpecialBuild": ""
     },
     "VarFileInfo": {

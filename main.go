@@ -12,7 +12,7 @@ import (
 
 const (
 	appTitle   string = "SCUtil"
-	appVersion string = "v1.2.5"
+	appVersion string = "v1.3.0"
 )
 
 func main() {
@@ -61,8 +61,12 @@ func main() {
 			Execute: scu.ClearRsiLauncherAppData,
 		},
 		{
-			Title:   "Backup control mappings",
-			Execute: scu.BackupControlMappings,
+			Title:   "Backup & restore control mappings",
+			Execute: scu.BackupOrRestoreControlMappings,
+		},
+		{
+			Title:   "Backup screenshots",
+			Execute: scu.BackupScreenshots,
 		},
 		{
 			Title:   "Exit",
