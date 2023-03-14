@@ -40,9 +40,14 @@ Utility that does some useful things with your Star Citizen directory
 > This clears out logs and cached items that are typically found within > the RSI Launcher's App Data which sometimes prevent the game from
 > starting.
 
-### 1.8. Backup control mapping
+### 1.8. Backup and restore control mapping
 
-> This does a backup of your game's custom control mappings.
+> This does a backup of your game's custom control mappings as well as give you the option to restore previously backed up control mappings.
+> The backup location can be found in the parent directory of your Star Citizen game files.
+
+### 1.9. Backup screenshots
+
+> This gives the user the ability to backup their Star Citizen screenshots.
 
 ## 2. Running SCUtil
 
