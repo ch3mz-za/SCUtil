@@ -6,8 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-
-	"github.com/ch3mz-za/SCUtil/pkg/common"
 )
 
 var wg sync.WaitGroup
@@ -24,7 +22,6 @@ func GetP4kFilenames(gameDir, outputDir string) {
 
 	MakeDir(outputDir)
 
-	fileCount := len(r.File)
 	filename := filepath.Join(outputDir, "P4k_filenames.txt")
 
 	p4kFileNameFile, err := os.Create(filename)
@@ -34,25 +31,10 @@ func GetP4kFilenames(gameDir, outputDir string) {
 	}
 	defer p4kFileNameFile.Close()
 
-	var wg sync.WaitGroup
-	progress := make(chan int)
-
-	wg.Add(1)
-	go common.ProgressBar(int64(fileCount), progress, &wg)
-
-	cnt := 0
 	for _, f := range r.File {
 		p4kFileNameFile.WriteString(f.Name + "\n")
-		cnt++
-		if cnt%1000 == 0 {
-			progress <- 1000
-			cnt = 0
-		}
-	}
 
-	progress <- cnt
-	close(progress)
-	wg.Wait()
+	}
 }
 
 func MakeDir(dir string) {

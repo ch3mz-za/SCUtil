@@ -9,29 +9,20 @@ import (
 	"time"
 
 	"github.com/ch3mz-za/SCUtil/pkg/common"
-	disp "github.com/ch3mz-za/SCUtil/pkg/display"
 )
 
-type SubFeature string
+type GameVersion string
 
 const (
-	optLive disp.MenuStringOption = "LIVE"
-	optPtu  disp.MenuStringOption = "PTU"
-	optBack disp.MenuStringOption = "Back"
+	Live GameVersion = "LIVE"
+	Ptu  GameVersion = "PTU"
 )
 
-var ptuOrLiveMenu = disp.NewStringOptionMenu(
-	"Select Game Version",
-	[]disp.MenuStringOption{optLive, optPtu, optBack},
-)
-
-func restoreFiles(sourceDir, destDir, filename string) {
+func restoreFiles(sourceDir, destDir, filename string) error {
 
 	if _, err := os.Stat(destDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(destDir, 0755); err != nil {
-			fmt.Println("Unable to create control mappings directory")
-			disp.EnterToContinue()
-			return
+			return errors.New("Unable to create control mappings directory")
 		}
 		println("Control mappings directory created: " + destDir)
 	}
@@ -48,10 +39,11 @@ func restoreFiles(sourceDir, destDir, filename string) {
 		filepath.Join(sourceDir, string(filename)), // src
 		filepath.Join(destDir, restoreFileName),    // dst
 	); err != nil {
-		fmt.Printf("Restore error: %s\n", err.Error())
+		return fmt.Errorf("Restore error: %s\n", err.Error())
 	} else {
 		fmt.Printf("Control mapping restored: %s\n", string(filename))
 	}
+	return nil
 }
 
 func backupFiles(sourceDir, destDir string, addTimestamp bool, filetypes ...string) error {

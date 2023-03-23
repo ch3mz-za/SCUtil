@@ -8,9 +8,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync"
-
-	"github.com/schollz/progressbar/v3"
 )
 
 func CleanInput(input string) string {
@@ -56,14 +53,6 @@ func UserHomeDir() string {
 		home = os.Getenv("USERPROFILE")
 	}
 	return home
-}
-
-func ProgressBar(maxBarLen int64, progress chan int, wg *sync.WaitGroup) {
-	defer wg.Done()
-	bar := progressbar.Default(maxBarLen)
-	for p := range progress {
-		bar.Add(p)
-	}
 }
 
 func CopyFile(src string, dst string) error {
