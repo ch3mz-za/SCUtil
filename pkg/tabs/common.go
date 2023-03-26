@@ -1,13 +1,10 @@
 package tabs
 
 import (
-	"fyne.io/fyne/v2/widget"
-	"github.com/ch3mz-za/SCUtil/pkg/scu"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/dialog"
 )
 
-var GameVersion scu.GameVersion
-var gameVersionDropDown = widget.NewSelect([]string{string(scu.Live), string(scu.Ptu)}, setGameVerion)
-
-func setGameVerion(value string) {
-	GameVersion = scu.GameVersion(value)
+func doneDiaglog(win fyne.Window) {
+	dialog.ShowInformation("Status", "Completed successfully", win)
 }

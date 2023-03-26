@@ -1,29 +1,34 @@
 package tabs
 
 import (
+	"fmt"
 	"log"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	"github.com/ch3mz-za/SCUtil/pkg/scu"
 )
 
-func Restore(w fyne.Window) fyne.CanvasObject {
+func Restore(win fyne.Window) fyne.CanvasObject {
 	restoreData := binding.BindStringList(&[]string{})
-	// var restoreFiles *[]string
-	// var err error
-	var gameVer string
-	gameVerDD := widget.NewSelect([]string{string(scu.Live), string(scu.Ptu)}, func(value string) {
-		gameVer = value
-		items, err := scu.GetBackedUpControlMappings(scu.GameVersion(gameVer))
+
+	selectionGameVersion := widget.NewSelect([]string{scu.GameVerLIVE, scu.GameVerPTU}, func(value string) {
+		items, err := scu.GetBackedUpControlMappings(value)
 		if err != nil {
-			log.Println("error: " + err.Error())
+			dialog.ShowError(err, win)
 		}
 		restoreData.Set(*items)
 	})
+
+	top := container.New(
+		layout.NewVBoxLayout(),
+		widget.NewLabel("Restore Control Mappings"),
+		selectionGameVersion,
+	)
 
 	restoreList := widget.NewListWithData(restoreData,
 		func() fyne.CanvasObject {
@@ -33,16 +38,24 @@ func Restore(w fyne.Window) fyne.CanvasObject {
 			o.(*widget.Label).Bind(i.(binding.String))
 		})
 
+	var err error
+	var itemToBeRestored string
+	restoreList.OnSelected = func(id widget.ListItemID) {
+		itemToBeRestored, err = restoreData.GetValue(id)
+		if err != nil {
+			dialog.ShowError(err, win)
+		}
+
+	}
+
 	btnRestore := widget.NewButton("restore", func() {
-		log.Printf("HALLO! | %s\n", gameVer)
+		log.Printf("Restore: %s\n", itemToBeRestored)
+		if err = scu.RestoreControlMappings(selectionGameVersion.Selected, itemToBeRestored); err != nil {
+			dialog.ShowError(err, win)
+		} else {
+			dialog.ShowInformation("Restore Control Mappings", fmt.Sprintf("%s restored", itemToBeRestored), win)
+		}
 	})
 
-	cont := container.New(
-		layout.NewVBoxLayout(),
-		widget.NewLabel("Restore Control Mappings"),
-		gameVerDD,
-		container.NewBorder(nil, btnRestore, nil, nil, restoreList),
-	)
-
-	return cont
+	return container.NewBorder(top, btnRestore, nil, nil, restoreList)
 }

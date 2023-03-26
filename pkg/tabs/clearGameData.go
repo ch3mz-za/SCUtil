@@ -1,53 +1,73 @@
 package tabs
 
 import (
-	"fmt"
-	"log"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	"github.com/ch3mz-za/SCUtil/pkg/scu"
 )
 
-func ClearGameData() *fyne.Container {
+func ClearGameData(win fyne.Window) fyne.CanvasObject {
 
 	const (
-		clearAlldataExceptP4k string = "Clear all data except p4k"
-		clearUserData         string = "Clear USER data"
+		clearAlldataExceptP4k   string = "Clear all data except p4k"
+		clearUserData           string = "Clear USER data"
+		clearStarCitizenAppData string = "Clear Star Citizen AppData"
+		clearRsiLauncherAppData string = "Clear RSI Launcher AppData"
 	)
 
-	gameVersionDropDown.Selected = string(scu.Live)
+	dropDownGameVersion := widget.NewSelect([]string{scu.GameVerLIVE, scu.GameVerPTU}, func(value string) {})
+	dropDownGameVersion.Selected = scu.GameVerLIVE
+	dropDownGameVersion.Hidden = true
 
-	var removeControlMappings bool
-	checkRemoveControlMappings := widget.NewCheck("Remove Control Mappings", func(value bool) {
-		removeControlMappings = value
-	})
+	checkRemoveControlMappings := widget.NewCheck("Remove Control Mappings", func(value bool) {})
 	checkRemoveControlMappings.Hidden = true
 
-	var clearDataSelection string
+	radioGroup := widget.NewRadioGroup([]string{clearStarCitizenAppData, clearRsiLauncherAppData, clearUserData, clearAlldataExceptP4k}, func(value string) {
+		checkRemoveControlMappings.Hidden = value != clearUserData
+		dropDownGameVersion.Hidden = value != clearAlldataExceptP4k && value != clearUserData
+	})
+	radioGroup.Selected = clearStarCitizenAppData
 
-	return container.New(
+	top := container.New(
 		layout.NewVBoxLayout(),
-		gameVersionDropDown,
-		widget.NewRadioGroup([]string{clearAlldataExceptP4k, clearUserData}, func(value string) {
-			clearDataSelection = value
-			checkRemoveControlMappings.Hidden = value != clearUserData
-		}),
+		radioGroup,
+		dropDownGameVersion,
 		checkRemoveControlMappings,
-		widget.NewButton("clear", func() {
-			switch clearDataSelection {
-			case clearAlldataExceptP4k:
-				if err := scu.ClearAllDataExceptP4k(GameVersion); err != nil {
-					fmt.Println(err.Error())
-				}
-			case clearUserData:
-				if err := scu.ClearUserFolder(GameVersion, removeControlMappings); err != nil {
-					fmt.Println(err.Error())
-				}
-			}
-			log.Printf("tapped '%s' for game version: %s | remove control mappings: %v\n", clearDataSelection, GameVersion, removeControlMappings)
-		}),
 	)
+
+	bottom := widget.NewButton("clear", func() {
+		var err error
+		switch radioGroup.Selected {
+		case clearStarCitizenAppData:
+			var removedFiles *[]string
+			removedFiles, err = scu.ClearStarCitizenAppData()
+			if len(*removedFiles) != 0 {
+				dialog.ShowInformation("Files deleted", strings.Join(*removedFiles, "\n"), win)
+			}
+		case clearRsiLauncherAppData:
+			var removedFiles *[]string
+			removedFiles, err = scu.ClearRsiLauncherAppData()
+			if len(*removedFiles) != 0 {
+				dialog.ShowInformation("AppData deleted", strings.Join(*removedFiles, "\n"), win)
+			}
+		case clearAlldataExceptP4k:
+			if err = scu.ClearAllDataExceptP4k(dropDownGameVersion.Selected); err == nil {
+				dialog.ShowInformation("Clear All Data", "data cleared", win)
+			}
+		case clearUserData:
+			if err = scu.ClearUserFolder(dropDownGameVersion.Selected, checkRemoveControlMappings.Checked); err == nil {
+				dialog.ShowInformation("Clear USER Data", "data cleared", win)
+			}
+		}
+		if err != nil {
+			dialog.ShowError(err, win)
+		}
+	})
+
+	return container.NewBorder(top, bottom, nil, nil, layout.NewSpacer())
 }

@@ -11,20 +11,17 @@ import (
 	"github.com/ch3mz-za/SCUtil/pkg/common"
 )
 
-type GameVersion string
-
 const (
-	Live GameVersion = "LIVE"
-	Ptu  GameVersion = "PTU"
+	GameVerLIVE string = "LIVE"
+	GameVerPTU  string = "PTU"
 )
 
 func restoreFiles(sourceDir, destDir, filename string) error {
 
 	if _, err := os.Stat(destDir); os.IsNotExist(err) {
 		if err := os.MkdirAll(destDir, 0755); err != nil {
-			return errors.New("Unable to create control mappings directory")
+			return errors.New("unable to create control mappings directory")
 		}
-		println("Control mappings directory created: " + destDir)
 	}
 
 	restoreFileName := filename
@@ -39,9 +36,7 @@ func restoreFiles(sourceDir, destDir, filename string) error {
 		filepath.Join(sourceDir, string(filename)), // src
 		filepath.Join(destDir, restoreFileName),    // dst
 	); err != nil {
-		return fmt.Errorf("Restore error: %s\n", err.Error())
-	} else {
-		fmt.Printf("Control mapping restored: %s\n", string(filename))
+		return fmt.Errorf("restore error:\n %s", err.Error())
 	}
 	return nil
 }

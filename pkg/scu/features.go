@@ -1,7 +1,6 @@
 package scu
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
 	"log"
@@ -35,7 +34,7 @@ var (
 // 	return common.FindDir(RootDir, string(version))
 // }
 
-func ClearAllDataExceptP4k(version GameVersion) error {
+func ClearAllDataExceptP4k(version string) error {
 	gameDir, err := common.FindDir(RootDir, string(version))
 	if err != nil || gameDir == "" {
 		return errors.New("Unable to find game directory")
@@ -74,7 +73,7 @@ func exists(path string) bool {
 	}
 }
 
-func ClearUserFolder(version GameVersion, exclusionsEnabled bool) error {
+func ClearUserFolder(version string, exclusionsEnabled bool) error {
 	userDir, err := common.FindDir(RootDir, string(version))
 	if err != nil || userDir == "" {
 		return errors.New("Unable to find game directory")
@@ -105,42 +104,33 @@ func ClearUserFolder(version GameVersion, exclusionsEnabled bool) error {
 			return nil
 		})
 	if err != nil {
-		return fmt.Errorf("Error removing USER directory: %s\n", err.Error())
+		return fmt.Errorf("error removing USER directory:\n %s", err.Error())
 	}
 
 	fmt.Println("Cleared USER directory")
 	return nil
 }
 
-func GetP4kFilenames(version GameVersion) error {
+func GetP4kFilenames(version string) error {
 
 	gameDir, err := common.FindDir(RootDir, string(version))
 	if err != nil || gameDir == "" {
-		return errors.New("Unable to find game directory")
+		return errors.New("unable to find game directory")
 	}
 
-	fmt.Printf("\nGame directory found: %s\n", gameDir)
 	p4k.GetP4kFilenames(gameDir, p4kFileNameDir)
 	return nil
 }
 
-func SearchP4kFilenames(version GameVersion) error {
+func SearchP4kFilenames(version, phrase string) error {
 	gameDir, err := common.FindDir(RootDir, string(version))
 	if err != nil || gameDir == "" {
-		return errors.New("Unable to find game directory")
+		return errors.New("unable to find game directory")
 	}
 
-	reader := bufio.NewReader(os.Stdin)
-	phrase, err := reader.ReadString('\n')
-	if err != nil {
-		return fmt.Errorf("Invalid input: %s\n", err.Error())
-	}
-
-	// TODO: Fix this for GUI
-	phrase = "kaas"
 	results, err := p4k.SearchP4kFilenames(gameDir, phrase)
 	if err != nil {
-		return fmt.Errorf("Unable to search files: %s\n", err.Error())
+		return fmt.Errorf("unable to search files: %s\n", err.Error())
 	}
 
 	println()
@@ -151,52 +141,50 @@ func SearchP4kFilenames(version GameVersion) error {
 	return nil
 }
 
-func ClearStarCitizenAppData() {
+func ClearStarCitizenAppData() (*[]string, error) {
+	var filesRemoved []string
+
 	scAppDataDir := filepath.Join(common.UserHomeDir(), "AppData", "Local", "Star Citizen")
 	files, _ := common.ListAllFilesAndDirs(scAppDataDir)
 
 	if len(files) == 0 {
-		fmt.Println("Star Citizen AppData is empty")
+		return &filesRemoved, errors.New("Star Citizen AppData is empty")
 	} else {
-		fmt.Println("Clearing Star Citizen AppData directory")
 		for _, f := range files {
 			filename := filepath.Join(scAppDataDir, f.Name())
 			err := os.RemoveAll(filename)
 			if err != nil {
-				fmt.Printf("ERROR: %s\n", err.Error())
 				continue
 			}
-			println("Deleted: " + filename)
+			filesRemoved = append(filesRemoved, f.Name())
 		}
 	}
+	return &filesRemoved, nil
 }
 
-func ClearRsiLauncherAppData() {
+func ClearRsiLauncherAppData() (*[]string, error) {
 
+	var filesRemoved []string
 	for _, folder := range []string{"rsilauncher", "RSI Launcher"} {
 		rsiLauncherDir := filepath.Join(common.UserHomeDir(), "AppData", "Roaming", folder)
 		files, _ := common.ListAllFilesAndDirs(rsiLauncherDir)
-
 		if len(files) == 0 {
-			fmt.Printf("RSI Launcher AppData folder (%s) is empty!\n", folder)
-			time.Sleep(twoSecondDur)
-		} else {
+			return &filesRemoved, errors.New("RSI Launcher AppData folder is empty")
+		}
 
-			fmt.Println("Clearing Star Citizen AppData directory")
-			for _, f := range files {
-				filename := filepath.Join(rsiLauncherDir, f.Name())
-				err := os.RemoveAll(filename)
-				if err != nil {
-					fmt.Println("ERROR: " + err.Error())
-					continue
-				}
-				println("Deleted: " + filename)
+		for _, f := range files {
+			filename := filepath.Join(rsiLauncherDir, f.Name())
+			err := os.RemoveAll(filename)
+			if err != nil {
+				continue
 			}
+			filesRemoved = append(filesRemoved, f.Name())
 		}
 	}
+	return &filesRemoved, nil
 }
 
-func BackupControlMappings(version GameVersion) error {
+func BackupControlMappings(version string) error {
 	gameDir, err := common.FindDir(RootDir, string(version))
 	if err != nil || gameDir == "" {
 		return errors.New("unable to find game directory")
@@ -210,18 +198,18 @@ func BackupControlMappings(version GameVersion) error {
 	return nil
 }
 
-func GetBackedUpControlMappings(version GameVersion) (*[]string, error) {
+func GetBackedUpControlMappings(version string) (*[]string, error) {
 	var items []string
 	gameDir, err := common.FindDir(RootDir, string(version))
 	if err != nil || gameDir == "" {
-		return nil, errors.New("unable to find game directory")
+		return &items, errors.New("unable to find game directory")
 	}
 
 	backupDir := filepath.Join(filepath.Dir(filepath.Dir(gameDir)), controlMappingsBackupDir, string(version))
 
 	files, err := os.ReadDir(backupDir)
 	if err != nil {
-		return nil, errors.New("unable to open backup directory: " + err.Error())
+		return &items, errors.New("unable to open backup directory")
 	}
 
 	for _, f := range files {
@@ -230,44 +218,20 @@ func GetBackedUpControlMappings(version GameVersion) (*[]string, error) {
 	return &items, nil
 }
 
-// func RestoreControlMappings(version GameVersion) error {
-// 	gameDir, err := common.FindDir(RootDir, string(version))
-// 	if err != nil || gameDir == "" {
-// 		return errors.New("Unable to find game directory")
-// 	}
-// 	mappingsDir := filepath.Join(gameDir, controlMappingsDir)
-// 	backupDir := filepath.Join(filepath.Dir(filepath.Dir(gameDir)), controlMappingsBackupDir, string(version))
-
-// 	files, err := os.ReadDir(backupDir)
-// 	if err != nil {
-// 		return errors.New("Unable to open backup directory: " + err.Error())
-// 	}
-
-// 	var restoreMenuOpts []disp.MenuStringOption
-// 	for _, f := range files {
-// 		if strings.HasSuffix(strings.ToLower(f.Name()), ctrlMapFileExt) {
-// 			restoreMenuOpts = append(restoreMenuOpts, disp.MenuStringOption(f.Name()))
-// 		}
-// 	}
-
-// 	if len(restoreMenuOpts) == 0 {
-// 		return errors.New("No objects found for restoration")
-// 	}
-
-// 	restoreMenuOpts = append(restoreMenuOpts, optBack)
-// 	menuOption := disp.NewStringOptionMenu("Select file to restore", restoreMenuOpts).Run()
-// 	if menuOption == optBack {
-// 		return
-// 	}
-
-// 	restoreFiles(backupDir, mappingsDir, string(menuOption))
-// }
-
-func BackupScreenshots(version GameVersion) error {
+func RestoreControlMappings(version string, filename string) error {
 	gameDir, err := common.FindDir(RootDir, string(version))
 	if err != nil || gameDir == "" {
-		errors.New("Unable to find game directory")
+		return errors.New("unable to find game directory")
+	}
+	mappingsDir := filepath.Join(gameDir, controlMappingsDir)
+	backupDir := filepath.Join(filepath.Dir(filepath.Dir(gameDir)), controlMappingsBackupDir, string(version))
+	return restoreFiles(backupDir, mappingsDir, filename)
+}
 
+func BackupScreenshots(version string) error {
+	gameDir, err := common.FindDir(RootDir, string(version))
+	if err != nil || gameDir == "" {
+		return errors.New("unable to find game directory")
 	}
 
 	fmt.Printf("\nGame directory found: %s\n", gameDir)
