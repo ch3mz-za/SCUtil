@@ -80,4 +80,6 @@ go build -o bin/SCUtil.exe main.go
 
 With the executable, follow the instructions in section `2.1`.
 
-
+> **NOTE** <br>
+> Since version 2.0.0 of SCUtil, compilation will require the use of [Fyne](https://github.com/fyne-io/fyne) and a GCC compiler.
+>

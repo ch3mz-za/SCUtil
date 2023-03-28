@@ -1,13 +1,17 @@
-//go:generate goversioninfo
+//go:generate
 package main
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 
-	disp "github.com/ch3mz-za/SCUtil/pkg/display"
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/theme"
 	"github.com/ch3mz-za/SCUtil/pkg/scu"
-	log "github.com/sirupsen/logrus"
+	"github.com/ch3mz-za/SCUtil/pkg/tabs"
 )
 
 const (
@@ -18,7 +22,6 @@ const (
 func main() {
 
 	var err error
-
 	scu.RootDir, err = os.Getwd()
 	if err != nil {
 		log.Fatal("Unable to determine working directory")
@@ -31,49 +34,18 @@ func main() {
 		}
 	}
 
-	var menuItems = []*disp.MenuItem{
-		{
-			Title:   "Clear all data except p4k",
-			Execute: scu.ClearAllDataExceptP4k,
-		},
-		{
-			Title:   "Clear user folder (excluding control mappings)",
-			Execute: scu.ClearUserFolerWithExclusions,
-		},
-		{
-			Title:   "Clear user folder (including control mappings)",
-			Execute: scu.ClearUserFolerWithoutExclusions,
-		},
-		{
-			Title:   "Get all filenames in p4k",
-			Execute: scu.GetP4kFilenames,
-		},
-		{
-			Title:   "Search filenames in p4k",
-			Execute: scu.SearchP4kFilenames,
-		},
-		{
-			Title:   "Clear Star Citizen App Data (Windows AppData)",
-			Execute: scu.ClearStarCitizenAppData,
-		},
-		{
-			Title:   "Clear RSI Launcher data (Windows AppData)",
-			Execute: scu.ClearRsiLauncherAppData,
-		},
-		{
-			Title:   "Backup & restore control mappings",
-			Execute: scu.BackupOrRestoreControlMappings,
-		},
-		{
-			Title:   "Backup screenshots",
-			Execute: scu.BackupScreenshots,
-		},
-		{
-			Title:   "Exit",
-			Execute: scu.Exit,
-		},
-	}
+	a := app.NewWithID("SCUtil-v2.0.0")
+	w := a.NewWindow("SCUtil - v2.0.0")
+	mainTabs := container.NewAppTabs(
+		container.NewTabItemWithIcon("Clean", theme.DeleteIcon(), tabs.ClearGameData(w)),
+		container.NewTabItemWithIcon("Backup", theme.StorageIcon(), tabs.Backup(w)),
+		container.NewTabItemWithIcon("Restore", theme.UploadIcon(), tabs.Restore(w)),
+		container.NewTabItem("Advanced", tabs.Advanced(w)),
+	)
+	mainTabs.SetTabLocation(container.TabLocationLeading)
 
-	m := disp.NewMenu(appTitle, appVersion, menuItems)
-	m.Run()
+	w.SetContent(mainTabs)
+	w.Resize(fyne.NewSize(400, 310))
+	w.Show()
+	a.Run()
 }
