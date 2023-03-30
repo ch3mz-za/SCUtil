@@ -40,6 +40,8 @@ func Advanced(win fyne.Window) fyne.CanvasObject {
 
 	return container.New(
 		layout.NewVBoxLayout(),
+		selectionGameVersion,
+		searchCard,
 		container.New(
 			layout.NewGridLayoutWithColumns(2),
 			widget.NewLabel("Extract Data.p4k filenames"),
@@ -55,7 +57,6 @@ func Advanced(win fyne.Window) fyne.CanvasObject {
 				progress.Hide()
 			}),
 		),
-		searchCard,
 		progress,
 	)
 }
