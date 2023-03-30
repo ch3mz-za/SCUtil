@@ -14,11 +14,6 @@ import (
 	"github.com/ch3mz-za/SCUtil/pkg/tabs"
 )
 
-const (
-	appTitle   string = "SCUtil"
-	appVersion string = "v1.3.0"
-)
-
 func main() {
 
 	var err error
@@ -34,8 +29,8 @@ func main() {
 		}
 	}
 
-	a := app.NewWithID("SCUtil-v2.0.0")
-	w := a.NewWindow("SCUtil - v2.0.0")
+	a := app.NewWithID("SCUtil-v2.0.1")
+	w := a.NewWindow("SCUtil - v2.0.1")
 	mainTabs := container.NewAppTabs(
 		container.NewTabItemWithIcon("Clean", theme.DeleteIcon(), tabs.ClearGameData(w)),
 		container.NewTabItemWithIcon("Backup", theme.StorageIcon(), tabs.Backup(w)),
