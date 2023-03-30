@@ -95,15 +95,3 @@ func findInFile(phrase, filePath string, resultsChan chan string) {
 		}
 	}
 }
-
-func WriteStringsToFile(filename string, strings []string) {
-	file, err := os.Create(filename)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-
-	for _, s := range strings {
-		file.WriteString(s + "\n")
-	}
-}

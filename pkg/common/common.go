@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"io"
 	"io/fs"
 	"io/ioutil"
@@ -73,4 +74,24 @@ func CopyFile(src string, dst string) error {
 		return err
 	}
 	return nil
+}
+
+func MakeDir(dir string) {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.Mkdir(dir, os.ModePerm); err != nil {
+			fmt.Printf("Unable to create directory: %s - Error: %s", dir, err.Error())
+		}
+	}
+}
+
+func WriteStringsToFile(filename string, strings []string) {
+	file, err := os.Create(filename)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	for _, s := range strings {
+		file.WriteString(s + "\n")
+	}
 }

@@ -18,28 +18,45 @@ func Advanced(win fyne.Window) fyne.CanvasObject {
 	progress.Stop()
 	progress.Hide()
 
-	entry := widget.NewEntry()
-	searchField := &widget.Form{
-		Items: []*widget.FormItem{{Text: "Phrase", Widget: entry}},
-		OnSubmit: func() {
-			progress.Show()
-			progress.Start()
-			if err := scu.SearchP4kFilenames(selectionGameVersion.Selected, entry.Text); err != nil {
-				dialog.ShowError(err, win)
-			} else {
-				doneDiaglog(win)
-			}
-			progress.Stop()
-			progress.Hide()
-		},
-	}
-
+	searchEntry := widget.NewEntry()
 	searchCard := widget.NewCard("", "Search Data.p4k filenames", container.NewVBox(
-		searchField,
+		&widget.Form{
+			Items: []*widget.FormItem{{Text: "Phrase", Widget: searchEntry}},
+			OnSubmit: func() {
+				progress.Show()
+				progress.Start()
+				if err := scu.SearchP4kFilenames(selectionGameVersion.Selected, searchEntry.Text); err != nil {
+					dialog.ShowError(err, win)
+				} else {
+					doneDiaglog(win)
+				}
+				progress.Stop()
+				progress.Hide()
+			},
+		},
 	))
 
-	return container.New(
+	extractEntry := widget.NewEntry()
+	extractCard := widget.NewCard("", "Extract file in Data.p4k", container.NewVBox(
+		&widget.Form{
+			Items: []*widget.FormItem{{Text: "Phrase", Widget: extractEntry}},
+			OnSubmit: func() {
+				progress.Show()
+				progress.Start()
+				if err := scu.ExtractP4kFile(selectionGameVersion.Selected, extractEntry.Text); err != nil {
+					dialog.ShowError(err, win)
+				} else {
+					doneDiaglog(win)
+				}
+				progress.Stop()
+				progress.Hide()
+			},
+		},
+	))
+
+	return container.NewVScroll(container.New(
 		layout.NewVBoxLayout(),
+		selectionGameVersion,
 		container.New(
 			layout.NewGridLayoutWithColumns(2),
 			widget.NewLabel("Extract Data.p4k filenames"),
@@ -56,6 +73,7 @@ func Advanced(win fyne.Window) fyne.CanvasObject {
 			}),
 		),
 		searchCard,
+		extractCard,
 		progress,
-	)
+	))
 }

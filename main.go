@@ -14,11 +14,6 @@ import (
 	"github.com/ch3mz-za/SCUtil/pkg/tabs"
 )
 
-const (
-	appTitle   string = "SCUtil"
-	appVersion string = "v1.3.0"
-)
-
 func main() {
 
 	var err error

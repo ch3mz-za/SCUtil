@@ -14,10 +14,12 @@ import (
 )
 
 const (
-	p4kFileNameDir   string        = "./p4k_filenames"
-	p4kSearchResults string        = "./p4k_search_results"
-	ctrlMapFileExt   string        = ".xml"
-	twoSecondDur     time.Duration = 2 * time.Second
+	p4kFileNameResults  string        = "./p4k_filenames/P4k_filenames.txt"
+	p4kSearchResults    string        = "./p4k_searched"
+	p4kExtractedResults string        = "./p4k_extracted"
+	p4kDataFilePath     string        = "Data.p4k"
+	ctrlMapFileExt      string        = ".xml"
+	twoSecondDur        time.Duration = 2 * time.Second
 
 	// Directories
 	controlMappingsDir       string = "USER/Client/0/Controls/Mappings"
@@ -30,14 +32,10 @@ var (
 	RootDir string = ""
 )
 
-// func GetGameDir() (string, error) {
-// 	return common.FindDir(RootDir, string(version))
-// }
-
 func ClearAllDataExceptP4k(version string) error {
-	gameDir, err := common.FindDir(RootDir, string(version))
+	gameDir, err := common.FindDir(RootDir, version)
 	if err != nil || gameDir == "" {
-		return errors.New("Unable to find game directory")
+		return errors.New("unable to find game directory")
 	}
 
 	// TODO: Check how you can update the status line
@@ -45,7 +43,7 @@ func ClearAllDataExceptP4k(version string) error {
 
 	files, err := common.ListAllFilesAndDirs(gameDir)
 	if err != nil {
-		return errors.New("Unable to list directories and files")
+		return errors.New("unable to list directories and files")
 	}
 
 	for _, f := range files {
@@ -74,9 +72,9 @@ func exists(path string) bool {
 }
 
 func ClearUserFolder(version string, exclusionsEnabled bool) error {
-	userDir, err := common.FindDir(RootDir, string(version))
+	userDir, err := common.FindDir(RootDir, version)
 	if err != nil || userDir == "" {
-		return errors.New("Unable to find game directory")
+		return errors.New("unable to find game directory")
 	}
 	exclusion := filepath.Join(userDir, "USER", "Client", "0", "Controls")
 	fmt.Printf("\nUser directory found: %s\n", userDir)
@@ -113,31 +111,31 @@ func ClearUserFolder(version string, exclusionsEnabled bool) error {
 
 func GetP4kFilenames(version string) error {
 
-	gameDir, err := common.FindDir(RootDir, string(version))
+	gameDir, err := common.FindDir(RootDir, version)
 	if err != nil || gameDir == "" {
 		return errors.New("unable to find game directory")
 	}
 
-	p4k.GetP4kFilenames(gameDir, p4kFileNameDir)
+	p4k.GetP4kFilenames(gameDir, p4kFileNameResults)
 	return nil
 }
 
 func SearchP4kFilenames(version, phrase string) error {
-	gameDir, err := common.FindDir(RootDir, string(version))
+	gameDir, err := common.FindDir(RootDir, version)
 	if err != nil || gameDir == "" {
 		return errors.New("unable to find game directory")
 	}
 
 	results, err := p4k.SearchP4kFilenames(gameDir, phrase)
 	if err != nil {
-		return fmt.Errorf("unable to search files: %s\n", err.Error())
+		return fmt.Errorf("unable to search files: %s", err.Error())
 	}
 
 	println()
 
 	filename := strings.ReplaceAll(phrase, "\\", "_") + ".txt"
-	p4k.MakeDir(p4kSearchResults)
-	p4k.WriteStringsToFile(filepath.Join(p4kSearchResults, filename), results)
+	common.MakeDir(p4kSearchResults)
+	common.WriteStringsToFile(filepath.Join(p4kSearchResults, filename), results)
 	return nil
 }
 
@@ -185,7 +183,7 @@ func ClearRsiLauncherAppData() (*[]string, error) {
 }
 
 func BackupControlMappings(version string) error {
-	gameDir, err := common.FindDir(RootDir, string(version))
+	gameDir, err := common.FindDir(RootDir, version)
 	if err != nil || gameDir == "" {
 		return errors.New("unable to find game directory")
 	}
@@ -200,7 +198,7 @@ func BackupControlMappings(version string) error {
 
 func GetBackedUpControlMappings(version string) (*[]string, error) {
 	var items []string
-	gameDir, err := common.FindDir(RootDir, string(version))
+	gameDir, err := common.FindDir(RootDir, version)
 	if err != nil || gameDir == "" {
 		return &items, errors.New("unable to find game directory")
 	}
@@ -218,8 +216,8 @@ func GetBackedUpControlMappings(version string) (*[]string, error) {
 	return &items, nil
 }
 
-func RestoreControlMappings(version string, filename string) error {
-	gameDir, err := common.FindDir(RootDir, string(version))
+func RestoreControlMappings(version, filename string) error {
+	gameDir, err := common.FindDir(RootDir, version)
 	if err != nil || gameDir == "" {
 		return errors.New("unable to find game directory")
 	}
@@ -229,7 +227,7 @@ func RestoreControlMappings(version string, filename string) error {
 }
 
 func BackupScreenshots(version string) error {
-	gameDir, err := common.FindDir(RootDir, string(version))
+	gameDir, err := common.FindDir(RootDir, version)
 	if err != nil || gameDir == "" {
 		return errors.New("unable to find game directory")
 	}
@@ -239,4 +237,19 @@ func BackupScreenshots(version string) error {
 	backupDir := filepath.Join(filepath.Dir(filepath.Dir(gameDir)), screenshotsBackupDir, string(version))
 	backupFiles(screenshotDir, backupDir, false, ".jpg")
 	return nil
+}
+
+func ExtractP4kFile(version, filename string) error {
+	gameDir, err := common.FindDir(RootDir, version)
+	if err != nil || gameDir == "" {
+		return errors.New("unable to find game directory")
+	}
+
+	p4kFilepath := filepath.Join(gameDir, p4kDataFilePath)
+	log.Println("p4kFilePath: " + p4kFilepath)
+	return p4k.ExtractFileFromP4k(
+		p4kFilepath,
+		filename,
+		p4kExtractedResults,
+	)
 }
