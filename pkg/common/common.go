@@ -74,3 +74,11 @@ func CopyFile(src string, dst string) error {
 	}
 	return nil
 }
+
+func Exists(path string) bool {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return false
+	} else {
+		return true
+	}
+}

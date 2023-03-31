@@ -2,7 +2,10 @@ module github.com/ch3mz-za/SCUtil
 
 go 1.20
 
-require fyne.io/fyne/v2 v2.3.3
+require (
+	fyne.io/fyne/v2 v2.3.3
+	github.com/BurntSushi/toml v1.2.1
+)
 
 require (
 	fyne.io/systray v1.10.1-0.20230312215936-7f71b037e260 // indirect
@@ -14,9 +17,9 @@ require (
 	github.com/fyne-io/image v0.0.0-20221020213044-f609c6a24345 // indirect
 	github.com/go-gl/gl v0.0.0-20211210172815-726fda9656d6 // indirect
 	github.com/go-gl/glfw/v3.3/glfw v0.0.0-20221017161538-93cebf72946b // indirect
-	github.com/go-text/typesetting v0.0.0-20230321192850-1c285b9dd540 // indirect
+	github.com/go-text/typesetting v0.0.0-20230331153826-ee575b9fc3d2 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
-	github.com/goki/freetype v0.0.0-20220119013949-7a161fd3728c // indirect
+	github.com/goki/freetype v1.0.1 // indirect
 	github.com/gopherjs/gopherjs v1.17.2 // indirect
 	github.com/jsummers/gobmp v0.0.0-20151104160322-e2ba15ffa76e // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

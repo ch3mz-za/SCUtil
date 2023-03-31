@@ -1,6 +1,7 @@
-package tabs
+package frontend
 
 import (
+	"errors"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -49,21 +50,27 @@ func ClearGameData(win fyne.Window) fyne.CanvasObject {
 			if len(*removedFiles) != 0 {
 				dialog.ShowInformation("Files deleted", strings.Join(*removedFiles, "\n"), win)
 			}
+
 		case clearRsiLauncherAppData:
-			var removedFiles *[]string
-			removedFiles, err = scu.ClearRsiLauncherAppData()
+			removedFiles := scu.ClearRsiLauncherAppData()
 			if len(*removedFiles) != 0 {
 				dialog.ShowInformation("AppData deleted", strings.Join(*removedFiles, "\n"), win)
 			}
+
 		case clearAlldataExceptP4k:
 			if err = scu.ClearAllDataExceptP4k(dropDownGameVersion.Selected); err == nil {
 				dialog.ShowInformation("Clear All Data", "data cleared", win)
 			}
+
 		case clearUserData:
 			if err = scu.ClearUserFolder(dropDownGameVersion.Selected, checkRemoveControlMappings.Checked); err == nil {
 				dialog.ShowInformation("Clear USER Data", "data cleared", win)
 			}
+
+		default:
+			err = errors.New("invalid option")
 		}
+
 		if err != nil {
 			dialog.ShowError(err, win)
 		}

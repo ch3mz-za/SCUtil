@@ -1,4 +1,4 @@
-package tabs
+package frontend
 
 import (
 	"fyne.io/fyne/v2"

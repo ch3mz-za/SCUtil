@@ -65,14 +65,6 @@ func ClearAllDataExceptP4k(version string) error {
 	return nil
 }
 
-func exists(path string) bool {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return false
-	} else {
-		return true
-	}
-}
-
 func ClearUserFolder(version string, exclusionsEnabled bool) error {
 	userDir, err := common.FindDir(RootDir, string(version))
 	if err != nil || userDir == "" {
@@ -133,8 +125,6 @@ func SearchP4kFilenames(version, phrase string) error {
 		return fmt.Errorf("unable to search files: %s\n", err.Error())
 	}
 
-	println()
-
 	filename := strings.ReplaceAll(phrase, "\\", "_") + ".txt"
 	p4k.MakeDir(p4kSearchResults)
 	p4k.WriteStringsToFile(filepath.Join(p4kSearchResults, filename), results)
@@ -162,26 +152,20 @@ func ClearStarCitizenAppData() (*[]string, error) {
 	return &filesRemoved, nil
 }
 
-func ClearRsiLauncherAppData() (*[]string, error) {
+func ClearRsiLauncherAppData() *[]string {
 
 	var filesRemoved []string
 	for _, folder := range []string{"rsilauncher", "RSI Launcher"} {
 		rsiLauncherDir := filepath.Join(common.UserHomeDir(), "AppData", "Roaming", folder)
 		files, _ := common.ListAllFilesAndDirs(rsiLauncherDir)
-		if len(files) == 0 {
-			return &filesRemoved, errors.New("RSI Launcher AppData folder is empty")
-		}
-
 		for _, f := range files {
-			filename := filepath.Join(rsiLauncherDir, f.Name())
-			err := os.RemoveAll(filename)
-			if err != nil {
+			if err := os.RemoveAll(filepath.Join(rsiLauncherDir, f.Name())); err != nil {
 				continue
 			}
 			filesRemoved = append(filesRemoved, f.Name())
 		}
 	}
-	return &filesRemoved, nil
+	return &filesRemoved
 }
 
 func BackupControlMappings(version string) error {
