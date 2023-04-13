@@ -1,11 +1,9 @@
-//go:generate
+// go: generate
 package main
 
 import (
 	"fmt"
 	"log"
-	"os"
-	"path/filepath"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -17,11 +15,14 @@ import (
 	"github.com/ch3mz-za/SCUtil/pkg/scu"
 )
 
+const version string = "v2.0.2"
+
 func main() {
 
 	var err error
-	var cfg *config.AppConfig
+	var cfg = &config.AppConfig{GameDir: ""}
 
+	// TODO: Write a handler
 	if common.Exists(config.AppConfigPath) {
 		cfg, err = config.ReadAppConfig(config.AppConfigPath)
 		if err != nil {
@@ -30,23 +31,28 @@ func main() {
 		}
 		scu.RootDir = cfg.GameDir
 	}
+	// else {
+	// 	file, _ := os.Create(config.AppConfigPath)
+	// 	file.close()
+	// }
 
+	a := app.NewWithID(fmt.Sprintf("SCUtil-%s", version))
+	w := a.NewWindow(fmt.Sprintf("SCUtil - %s", version))
+	wl := fend.WindowList{Main: w, Settings: nil}
+
+	var tw fyne.Window = nil
 	if scu.RootDir == "" {
-		scu.RootDir, err = os.Getwd()
-		if err != nil {
-			log.Fatal("Unable to determine working directory")
-		}
-		scu.RootDir = filepath.Dir(scu.RootDir)
+		w.Hide()
+		tw = a.NewWindow("Set game directory")
+		wl.Settings = tw
+		tw.SetContent(fend.Settings(wl, cfg))
+		tw.Resize(fyne.NewSize(400, 100))
+		tw.Show()
+	} else {
+		w.Show()
 	}
+	// w.Show()
 
-	if len(os.Args) == 2 {
-		if _, err := os.Stat(os.Args[1]); !os.IsNotExist(err) {
-			scu.RootDir = os.Args[1]
-		}
-	}
-
-	a := app.NewWithID("SCUtil-v2.0.2")
-	w := a.NewWindow("SCUtil - v2.0.2")
 	w.SetMaster()
 
 	mainTabs := container.NewAppTabs(
@@ -54,12 +60,12 @@ func main() {
 		container.NewTabItemWithIcon("Backup", theme.StorageIcon(), fend.Backup(w)),
 		container.NewTabItemWithIcon("Restore", theme.UploadIcon(), fend.Restore(w)),
 		container.NewTabItem("Advanced", fend.Advanced(w)),
-		container.NewTabItem("Settings", fend.Settings(cfg)),
+		container.NewTabItem("Settings", fend.Settings(wl, cfg)),
 	)
 	mainTabs.SetTabLocation(container.TabLocationLeading)
 
 	w.SetContent(mainTabs)
 	w.Resize(fyne.NewSize(400, 310))
-	w.Show()
+
 	a.Run()
 }

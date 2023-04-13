@@ -23,15 +23,27 @@ import (
 // 	return fyne.NewMainMenu(settings)
 // }
 
-func Settings(cfg *config.AppConfig) fyne.CanvasObject {
+type WindowList struct {
+	Main     fyne.Window
+	Settings fyne.Window
+}
+
+func Settings(wl WindowList, cfg *config.AppConfig) fyne.CanvasObject {
 	// gameDirBinding := binding.BindString(&scu.RootDir)
 	entry := widget.NewEntry()
 	entry.Text = scu.RootDir
 	btnSet := widget.NewButton("  set  ", func() {
 		scu.RootDir = entry.Text
 		cfg.GameDir = entry.Text
+		// TODO: Find and set game_directory
+
 		config.WriteAppConfig(config.AppConfigPath, cfg)
+		if wl.Settings != nil {
+			wl.Main.Show()
+			wl.Settings.Close()
+		}
 	})
+
 	return container.New(
 		layout.NewVBoxLayout(),
 		widget.NewLabel("Game directory"),

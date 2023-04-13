@@ -37,7 +37,7 @@ var (
 func ClearAllDataExceptP4k(version string) error {
 	gameDir, err := common.FindDir(RootDir, string(version))
 	if err != nil || gameDir == "" {
-		return errors.New("Unable to find game directory")
+		return errors.New("unable to find game directory")
 	}
 
 	// TODO: Check how you can update the status line
@@ -45,7 +45,7 @@ func ClearAllDataExceptP4k(version string) error {
 
 	files, err := common.ListAllFilesAndDirs(gameDir)
 	if err != nil {
-		return errors.New("Unable to list directories and files")
+		return errors.New("unable to list directories and files")
 	}
 
 	for _, f := range files {
@@ -68,10 +68,9 @@ func ClearAllDataExceptP4k(version string) error {
 func ClearUserFolder(version string, exclusionsEnabled bool) error {
 	userDir, err := common.FindDir(RootDir, string(version))
 	if err != nil || userDir == "" {
-		return errors.New("Unable to find game directory")
+		return errors.New("unable to find game directory")
 	}
 	exclusion := filepath.Join(userDir, "USER", "Client", "0", "Controls")
-	fmt.Printf("\nUser directory found: %s\n", userDir)
 
 	err = filepath.Walk(filepath.Join(userDir, "USER"),
 		func(path string, info os.FileInfo, err error) error {
@@ -82,24 +81,18 @@ func ClearUserFolder(version string, exclusionsEnabled bool) error {
 			if !info.IsDir() {
 
 				if exclusionsEnabled && strings.HasPrefix(path, exclusion) {
-					fmt.Println("Excluding: " + path)
 					return nil
 				}
 
 				if err := os.Remove(path); err != nil {
-					fmt.Printf("Unable to remove file: %s | error: %s\n", path, err.Error())
 					return nil
 				}
-				fmt.Println("Removing: " + path)
-
 			}
 			return nil
 		})
 	if err != nil {
 		return fmt.Errorf("error removing USER directory:\n %s", err.Error())
 	}
-
-	fmt.Println("Cleared USER directory")
 	return nil
 }
 
@@ -122,7 +115,7 @@ func SearchP4kFilenames(version, phrase string) error {
 
 	results, err := p4k.SearchP4kFilenames(gameDir, phrase)
 	if err != nil {
-		return fmt.Errorf("unable to search files: %s\n", err.Error())
+		return fmt.Errorf("unable to search files: %s", err.Error())
 	}
 
 	filename := strings.ReplaceAll(phrase, "\\", "_") + ".txt"
@@ -183,19 +176,20 @@ func BackupControlMappings(version string) error {
 }
 
 func GetBackedUpControlMappings(version string) (*[]string, error) {
-	var items []string
+
 	gameDir, err := common.FindDir(RootDir, string(version))
 	if err != nil || gameDir == "" {
-		return &items, errors.New("unable to find game directory")
+		return nil, errors.New("unable to find game directory")
 	}
 
 	backupDir := filepath.Join(filepath.Dir(filepath.Dir(gameDir)), controlMappingsBackupDir, string(version))
 
 	files, err := os.ReadDir(backupDir)
 	if err != nil {
-		return &items, errors.New("unable to open backup directory")
+		return nil, errors.New("unable to open backup directory")
 	}
 
+	items := make([]string, 0, len(files))
 	for _, f := range files {
 		items = append(items, f.Name())
 	}

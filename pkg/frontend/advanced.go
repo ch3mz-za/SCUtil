@@ -20,7 +20,7 @@ func Advanced(win fyne.Window) fyne.CanvasObject {
 
 	entry := widget.NewEntry()
 	searchField := &widget.Form{
-		Items: []*widget.FormItem{{Text: "Phrase", Widget: entry}},
+		Items: []*widget.FormItem{{Text: "Search p4k", Widget: entry}},
 		OnSubmit: func() {
 			progress.Show()
 			progress.Start()
@@ -34,7 +34,7 @@ func Advanced(win fyne.Window) fyne.CanvasObject {
 		},
 	}
 
-	searchCard := widget.NewCard("", "Search Data.p4k filenames", container.NewVBox(
+	searchCard := widget.NewCard("", "", container.NewVBox(
 		searchField,
 	))
 
