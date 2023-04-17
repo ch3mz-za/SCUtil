@@ -8,3 +8,7 @@ import (
 func doneDiaglog(win fyne.Window) {
 	dialog.ShowInformation("Status", "Completed successfully", win)
 }
+
+func resetToDefaultWindowSize(win fyne.Window) {
+	win.Resize(fyne.Size{Width: 400, Height: 310})
+}

@@ -3,50 +3,54 @@ package frontend
 import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/data/binding"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/ch3mz-za/SCUtil/pkg/config"
 	"github.com/ch3mz-za/SCUtil/pkg/scu"
 )
 
-// func MakeMainMenu(a fyne.App, w fyne.Window, cfg *config.AppConfig) *fyne.MainMenu {
+// TODO:
+//	- select game dir using file explorer
+//	- func: confirm game directory
 
-// 	openGameDirSettings := func() {
-// 		nw := a.NewWindow("Game Directory")
-// 		nw.SetContent(settingsWindow(cfg))
-// 		nw.Resize(fyne.NewSize(300, 100))
-// 		nw.Show()
-// 	}
-// 	settingsItem := fyne.NewMenuItem("Game dir", openGameDirSettings)
-// 	settings := fyne.NewMenu("Settings", settingsItem)
+func Settings(win fyne.Window, cfg *config.AppConfig) fyne.CanvasObject {
 
-// 	return fyne.NewMainMenu(settings)
-// }
+	// gameDirLabel := widget.NewLabel(scu.RootDir)
+	gameDirData := binding.BindString(&scu.RootDir)
+	gameDirLabel := widget.NewEntryWithData(gameDirData)
+	gameDirLabel.SetText(scu.RootDir)
 
-type WindowList struct {
-	Main     fyne.Window
-	Settings fyne.Window
-}
+	btnSetGameDir := widget.NewButton("", func() {
+		win.Resize(fyne.NewSize(700, 500))
+		dialog.ShowFolderOpen(func(list fyne.ListableURI, err error) {
+			if err != nil {
+				dialog.ShowError(err, win)
+				return
+			}
+			if list == nil {
+				resetToDefaultWindowSize(win)
+				return
+			}
+			gameDirData.Set(list.Path())
+			cfg.GameDir = list.Path()
 
-func Settings(wl WindowList, cfg *config.AppConfig) fyne.CanvasObject {
-	// gameDirBinding := binding.BindString(&scu.RootDir)
-	entry := widget.NewEntry()
-	entry.Text = scu.RootDir
-	btnSet := widget.NewButton("  set  ", func() {
-		scu.RootDir = entry.Text
-		cfg.GameDir = entry.Text
-		// TODO: Find and set game_directory
+			config.WriteAppConfig(config.AppConfigPath, cfg)
+			resetToDefaultWindowSize(win)
 
-		config.WriteAppConfig(config.AppConfigPath, cfg)
-		if wl.Settings != nil {
-			wl.Main.Show()
-			wl.Settings.Close()
-		}
+			// TODO: Confirm that you are happy with selected game directory
+
+		}, win)
 	})
+	btnSetGameDir.SetIcon(theme.FolderIcon())
+
+	cardGameDir := widget.NewCard("", "Game directory",
+		container.NewBorder(nil, nil, nil, btnSetGameDir, gameDirLabel))
 
 	return container.New(
 		layout.NewVBoxLayout(),
-		widget.NewLabel("Game directory"),
-		container.NewBorder(nil, nil, nil, btnSet, entry),
+		cardGameDir,
 	)
 }

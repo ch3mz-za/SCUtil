@@ -59,6 +59,7 @@ func ClearAllDataExceptP4k(version string) error {
 			fmt.Println("ERROR: " + err.Error())
 			continue
 		}
+		// TODO: Remove println like this
 		println("Deleted: " + fPAth)
 
 	}

@@ -8,6 +8,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"github.com/ch3mz-za/SCUtil/pkg/common"
 	"github.com/ch3mz-za/SCUtil/pkg/config"
@@ -31,41 +32,32 @@ func main() {
 		}
 		scu.RootDir = cfg.GameDir
 	}
-	// else {
-	// 	file, _ := os.Create(config.AppConfigPath)
-	// 	file.close()
-	// }
 
-	a := app.NewWithID(fmt.Sprintf("SCUtil-%s", version))
+	a := app.NewWithID("SCUtil")
 	w := a.NewWindow(fmt.Sprintf("SCUtil - %s", version))
-	wl := fend.WindowList{Main: w, Settings: nil}
-
-	var tw fyne.Window = nil
-	if scu.RootDir == "" {
-		w.Hide()
-		tw = a.NewWindow("Set game directory")
-		wl.Settings = tw
-		tw.SetContent(fend.Settings(wl, cfg))
-		tw.Resize(fyne.NewSize(400, 100))
-		tw.Show()
-	} else {
-		w.Show()
-	}
-	// w.Show()
-
 	w.SetMaster()
 
+	tabSettings := container.NewTabItem("Settings", fend.Settings(w, cfg))
 	mainTabs := container.NewAppTabs(
 		container.NewTabItemWithIcon("Clean", theme.DeleteIcon(), fend.ClearGameData(w)),
 		container.NewTabItemWithIcon("Backup", theme.StorageIcon(), fend.Backup(w)),
 		container.NewTabItemWithIcon("Restore", theme.UploadIcon(), fend.Restore(w)),
 		container.NewTabItem("Advanced", fend.Advanced(w)),
-		container.NewTabItem("Settings", fend.Settings(wl, cfg)),
+		tabSettings,
 	)
 	mainTabs.SetTabLocation(container.TabLocationLeading)
+	mainTabs.OnSelected = func(ti *container.TabItem) {
+		if ti.Text == "Settings" {
+			dialog.NewInformation("Empty Game Directry", "Please set your game directory", w)
+		}
+	}
+	if scu.RootDir == "" {
+		mainTabs.SelectTab(tabSettings)
+	}
 
 	w.SetContent(mainTabs)
 	w.Resize(fyne.NewSize(400, 310))
+	w.Show()
 
 	a.Run()
 }
