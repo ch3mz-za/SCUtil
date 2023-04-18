@@ -1,6 +1,8 @@
 package frontend
 
 import (
+	"errors"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
@@ -12,36 +14,31 @@ import (
 	"github.com/ch3mz-za/SCUtil/pkg/scu"
 )
 
-// TODO:
-//	- select game dir using file explorer
-//	- func: confirm game directory
+func settings(win fyne.Window, cfg *config.AppConfig) fyne.CanvasObject {
 
-func Settings(win fyne.Window, cfg *config.AppConfig) fyne.CanvasObject {
-
-	// gameDirLabel := widget.NewLabel(scu.RootDir)
-	gameDirData := binding.BindString(&scu.RootDir)
+	gameDirData := binding.BindString(&scu.GameDir)
 	gameDirLabel := widget.NewEntryWithData(gameDirData)
-	gameDirLabel.SetText(scu.RootDir)
 
 	btnSetGameDir := widget.NewButton("", func() {
 		win.Resize(fyne.NewSize(700, 500))
 		dialog.ShowFolderOpen(func(list fyne.ListableURI, err error) {
+			defer resetToDefaultWindowSize(win)
 			if err != nil {
 				dialog.ShowError(err, win)
 				return
 			}
 			if list == nil {
-				resetToDefaultWindowSize(win)
 				return
 			}
+
 			gameDirData.Set(list.Path())
+			if !scu.IsGameDirectory(list.Path()) {
+				dialog.ShowError(errors.New("not a valid game directory"), win)
+				return
+			}
+
 			cfg.GameDir = list.Path()
-
 			config.WriteAppConfig(config.AppConfigPath, cfg)
-			resetToDefaultWindowSize(win)
-
-			// TODO: Confirm that you are happy with selected game directory
-
 		}, win)
 	})
 	btnSetGameDir.SetIcon(theme.FolderIcon())

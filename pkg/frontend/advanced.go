@@ -9,7 +9,7 @@ import (
 	"github.com/ch3mz-za/SCUtil/pkg/scu"
 )
 
-func Advanced(win fyne.Window) fyne.CanvasObject {
+func advanced(win fyne.Window) fyne.CanvasObject {
 
 	selectionGameVersion := widget.NewSelect([]string{scu.GameVerLIVE, scu.GameVerPTU}, func(value string) {})
 	selectionGameVersion.Selected = scu.GameVerLIVE

@@ -12,7 +12,7 @@ import (
 	"github.com/ch3mz-za/SCUtil/pkg/scu"
 )
 
-func ClearGameData(win fyne.Window) fyne.CanvasObject {
+func clearGameData(win fyne.Window) fyne.CanvasObject {
 
 	const (
 		clearAlldataExceptP4k   string = "Clear all data except p4k"
