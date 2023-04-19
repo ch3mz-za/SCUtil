@@ -1,4 +1,4 @@
-package tabs
+package frontend
 
 import (
 	"fyne.io/fyne/v2"
@@ -9,7 +9,7 @@ import (
 	"github.com/ch3mz-za/SCUtil/pkg/scu"
 )
 
-func Advanced(win fyne.Window) fyne.CanvasObject {
+func advanced(win fyne.Window) fyne.CanvasObject {
 
 	selectionGameVersion := widget.NewSelect([]string{scu.GameVerLIVE, scu.GameVerPTU}, func(value string) {})
 	selectionGameVersion.Selected = scu.GameVerLIVE
@@ -20,7 +20,7 @@ func Advanced(win fyne.Window) fyne.CanvasObject {
 
 	entry := widget.NewEntry()
 	searchField := &widget.Form{
-		Items: []*widget.FormItem{{Text: "Phrase", Widget: entry}},
+		Items: []*widget.FormItem{{Text: "Search p4k", Widget: entry}},
 		OnSubmit: func() {
 			progress.Show()
 			progress.Start()
@@ -34,7 +34,7 @@ func Advanced(win fyne.Window) fyne.CanvasObject {
 		},
 	}
 
-	searchCard := widget.NewCard("", "Search Data.p4k filenames", container.NewVBox(
+	searchCard := widget.NewCard("", "", container.NewVBox(
 		searchField,
 	))
 

@@ -1,46 +1,25 @@
-//go:generate
+// go: generate
 package main
 
 import (
-	"log"
-	"os"
-	"path/filepath"
+	"fmt"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/theme"
-	"github.com/ch3mz-za/SCUtil/pkg/scu"
-	"github.com/ch3mz-za/SCUtil/pkg/tabs"
+	fend "github.com/ch3mz-za/SCUtil/pkg/frontend"
 )
+
+const version string = "v2.1.0"
 
 func main() {
 
-	var err error
-	scu.RootDir, err = os.Getwd()
-	if err != nil {
-		log.Fatal("Unable to determine working directory")
-	}
-	scu.RootDir = filepath.Dir(scu.RootDir)
+	a := app.NewWithID("SCUtil")
 
-	if len(os.Args) == 2 {
-		if _, err := os.Stat(os.Args[1]); !os.IsNotExist(err) {
-			scu.RootDir = os.Args[1]
-		}
-	}
-
-	a := app.NewWithID("SCUtil-v2.0.1")
-	w := a.NewWindow("SCUtil - v2.0.1")
-	mainTabs := container.NewAppTabs(
-		container.NewTabItemWithIcon("Clean", theme.DeleteIcon(), tabs.ClearGameData(w)),
-		container.NewTabItemWithIcon("Backup", theme.StorageIcon(), tabs.Backup(w)),
-		container.NewTabItemWithIcon("Restore", theme.UploadIcon(), tabs.Restore(w)),
-		container.NewTabItem("Advanced", tabs.Advanced(w)),
-	)
-	mainTabs.SetTabLocation(container.TabLocationLeading)
-
-	w.SetContent(mainTabs)
+	w := a.NewWindow(fmt.Sprintf("SCUtil - %s", version))
+	w.SetMaster()
+	w.SetContent(fend.SetupMainWindowContent(w))
 	w.Resize(fyne.NewSize(400, 310))
 	w.Show()
+
 	a.Run()
 }

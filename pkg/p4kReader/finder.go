@@ -29,10 +29,10 @@ func searchFilenameWorker(phrase string, files []*zip.File, border chan SearchBo
 	}
 }
 
-func SearchP4kFilenames(gameDir, phrase string) ([]string, error) {
+func SearchP4kFilenames(gameDir, phrase string) (*[]string, error) {
 	r, err := zip.OpenReader(filepath.Join(gameDir, dataP4k))
 	if err != nil {
-		fmt.Printf("Unable to open p4k data file: %s\n", err.Error())
+		return nil, fmt.Errorf("unable to open p4k data file: %s", err.Error())
 	}
 
 	results := make(chan string)
@@ -65,13 +65,12 @@ func SearchP4kFilenames(gameDir, phrase string) ([]string, error) {
 		close(results)
 	}()
 
-	var searchResults []string
+	searchResults := make([]string, 0, 1000)
 	for res := range results {
-		println(res)
 		searchResults = append(searchResults, res)
 	}
 
-	return searchResults, nil
+	return &searchResults, nil
 }
 
 func findInFile(phrase, filePath string, resultsChan chan string) {
@@ -96,14 +95,14 @@ func findInFile(phrase, filePath string, resultsChan chan string) {
 	}
 }
 
-func WriteStringsToFile(filename string, strings []string) {
+func WriteStringsToFile(filename string, strings *[]string) {
 	file, err := os.Create(filename)
 	if err != nil {
 		return
 	}
 	defer file.Close()
 
-	for _, s := range strings {
+	for _, s := range *strings {
 		file.WriteString(s + "\n")
 	}
 }

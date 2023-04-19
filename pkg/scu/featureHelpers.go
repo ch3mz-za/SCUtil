@@ -85,3 +85,17 @@ func backupFiles(sourceDir, destDir string, addTimestamp bool, filetypes ...stri
 	}
 	return nil
 }
+
+func IsGameDirectory(gameDir string) bool {
+	entries, err := os.ReadDir(gameDir)
+	if err != nil {
+		return false
+	}
+
+	for _, f := range entries {
+		if f.IsDir() && (f.Name() == GameVerLIVE || f.Name() == GameVerPTU) {
+			return true
+		}
+	}
+	return false
+}

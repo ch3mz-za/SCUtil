@@ -1,4 +1,4 @@
-package tabs
+package frontend
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ import (
 	"github.com/ch3mz-za/SCUtil/pkg/scu"
 )
 
-func Restore(win fyne.Window) fyne.CanvasObject {
+func restore(win fyne.Window) fyne.CanvasObject {
 	restoreData := binding.BindStringList(&[]string{})
 
 	selectionGameVersion := widget.NewSelect([]string{scu.GameVerLIVE, scu.GameVerPTU}, func(value string) {
@@ -45,7 +45,6 @@ func Restore(win fyne.Window) fyne.CanvasObject {
 		if err != nil {
 			dialog.ShowError(err, win)
 		}
-
 	}
 
 	btnRestore := widget.NewButton("restore", func() {

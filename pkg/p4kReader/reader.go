@@ -23,8 +23,7 @@ func GetP4kFilenames(gameDir, outputDir string) error {
 
 	p4kFileNameFile, err := os.Create(filename)
 	if err != nil {
-		fmt.Errorf("unable to create p4k filenames file:\n %s", err.Error())
-
+		return fmt.Errorf("unable to create p4k filenames file:\n %s", err.Error())
 	}
 	defer p4kFileNameFile.Close()
 

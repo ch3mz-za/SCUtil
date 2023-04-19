@@ -3,7 +3,6 @@ package scu
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,25 +26,17 @@ const (
 )
 
 var (
-	RootDir string = ""
+	GameDir string = ""
+	AppDir  string = ""
 )
 
-// func GetGameDir() (string, error) {
-// 	return common.FindDir(RootDir, string(version))
-// }
-
+// ClearAllDataExceptP4k - Clears all the data around the Data.p4k file
 func ClearAllDataExceptP4k(version string) error {
-	gameDir, err := common.FindDir(RootDir, string(version))
-	if err != nil || gameDir == "" {
-		return errors.New("Unable to find game directory")
-	}
-
-	// TODO: Check how you can update the status line
-	fmt.Printf("\nGame directory found: %s\n", gameDir)
+	gameDir := filepath.Join(GameDir, version)
 
 	files, err := common.ListAllFilesAndDirs(gameDir)
 	if err != nil {
-		return errors.New("Unable to list directories and files")
+		return errors.New("unable to list directories and files")
 	}
 
 	for _, f := range files {
@@ -56,32 +47,18 @@ func ClearAllDataExceptP4k(version string) error {
 
 		err := os.RemoveAll(fPAth)
 		if err != nil {
-			fmt.Println("ERROR: " + err.Error())
 			continue
 		}
-		println("Deleted: " + fPAth)
-
 	}
 	return nil
 }
 
-func exists(path string) bool {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return false
-	} else {
-		return true
-	}
-}
-
+// ClearUserFolder - Clears all the data in the USER folder with the option to exclude control mappings
 func ClearUserFolder(version string, exclusionsEnabled bool) error {
-	userDir, err := common.FindDir(RootDir, string(version))
-	if err != nil || userDir == "" {
-		return errors.New("Unable to find game directory")
-	}
-	exclusion := filepath.Join(userDir, "USER", "Client", "0", "Controls")
-	fmt.Printf("\nUser directory found: %s\n", userDir)
+	userDir := filepath.Join(GameDir, version, "USER")
+	exclusion := filepath.Join(userDir, "Client", "0", "Controls")
 
-	err = filepath.Walk(filepath.Join(userDir, "USER"),
+	err := filepath.Walk(userDir,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -90,50 +67,35 @@ func ClearUserFolder(version string, exclusionsEnabled bool) error {
 			if !info.IsDir() {
 
 				if exclusionsEnabled && strings.HasPrefix(path, exclusion) {
-					fmt.Println("Excluding: " + path)
 					return nil
 				}
 
 				if err := os.Remove(path); err != nil {
-					fmt.Printf("Unable to remove file: %s | error: %s\n", path, err.Error())
 					return nil
 				}
-				fmt.Println("Removing: " + path)
-
 			}
 			return nil
 		})
 	if err != nil {
 		return fmt.Errorf("error removing USER directory:\n %s", err.Error())
 	}
-
-	fmt.Println("Cleared USER directory")
 	return nil
 }
 
+// GetP4kFilenames - Gets all the filenames from the Data.p4k file and writes them to a specific folder
 func GetP4kFilenames(version string) error {
-
-	gameDir, err := common.FindDir(RootDir, string(version))
-	if err != nil || gameDir == "" {
-		return errors.New("unable to find game directory")
-	}
-
+	gameDir := filepath.Join(GameDir, version)
 	p4k.GetP4kFilenames(gameDir, p4kFileNameDir)
 	return nil
 }
 
+// SearchP4kFilenames - Search for specific filenames within the Data.p4k file
 func SearchP4kFilenames(version, phrase string) error {
-	gameDir, err := common.FindDir(RootDir, string(version))
-	if err != nil || gameDir == "" {
-		return errors.New("unable to find game directory")
-	}
-
+	gameDir := filepath.Join(GameDir, version)
 	results, err := p4k.SearchP4kFilenames(gameDir, phrase)
 	if err != nil {
-		return fmt.Errorf("unable to search files: %s\n", err.Error())
+		return fmt.Errorf("unable to search files: %s", err.Error())
 	}
-
-	println()
 
 	filename := strings.ReplaceAll(phrase, "\\", "_") + ".txt"
 	p4k.MakeDir(p4kSearchResults)
@@ -141,11 +103,11 @@ func SearchP4kFilenames(version, phrase string) error {
 	return nil
 }
 
+// ClearStarCitizenAppData - Clears the game's date within AppData
 func ClearStarCitizenAppData() (*[]string, error) {
-	var filesRemoved []string
-
 	scAppDataDir := filepath.Join(common.UserHomeDir(), "AppData", "Local", "Star Citizen")
 	files, _ := common.ListAllFilesAndDirs(scAppDataDir)
+	filesRemoved := make([]string, 0, len(files))
 
 	if len(files) == 0 {
 		return &filesRemoved, errors.New("Star Citizen AppData is empty")
@@ -162,81 +124,57 @@ func ClearStarCitizenAppData() (*[]string, error) {
 	return &filesRemoved, nil
 }
 
-func ClearRsiLauncherAppData() (*[]string, error) {
-
+// ClearRsiLauncherAppData - Clears the game's launcher data within AppData
+func ClearRsiLauncherAppData() *[]string {
 	var filesRemoved []string
 	for _, folder := range []string{"rsilauncher", "RSI Launcher"} {
 		rsiLauncherDir := filepath.Join(common.UserHomeDir(), "AppData", "Roaming", folder)
 		files, _ := common.ListAllFilesAndDirs(rsiLauncherDir)
-		if len(files) == 0 {
-			return &filesRemoved, errors.New("RSI Launcher AppData folder is empty")
-		}
-
 		for _, f := range files {
-			filename := filepath.Join(rsiLauncherDir, f.Name())
-			err := os.RemoveAll(filename)
-			if err != nil {
+			if err := os.RemoveAll(filepath.Join(rsiLauncherDir, f.Name())); err != nil {
 				continue
 			}
 			filesRemoved = append(filesRemoved, f.Name())
 		}
 	}
-	return &filesRemoved, nil
+	return &filesRemoved
 }
 
+// BackupControlMappings - Backup game control mappings
 func BackupControlMappings(version string) error {
-	gameDir, err := common.FindDir(RootDir, string(version))
-	if err != nil || gameDir == "" {
-		return errors.New("unable to find game directory")
-	}
-	log.Printf("\nUser directory found: %s\n", gameDir)
-	mappingsDir := filepath.Join(gameDir, controlMappingsDir)
-	backupDir := filepath.Join(filepath.Dir(filepath.Dir(gameDir)), controlMappingsBackupDir, string(version))
-	if err := backupFiles(mappingsDir, backupDir, true, ".xml"); err != nil {
+	mappingsDir := filepath.Join(GameDir, version, controlMappingsDir)
+	backupDir := filepath.Join(AppDir, controlMappingsBackupDir, version)
+	if err := backupFiles(mappingsDir, backupDir, true, ctrlMapFileExt); err != nil {
 		return err
 	}
 	return nil
 }
 
+// GetBackedUpControlMappings - Retrieve a list of all the backed-up control mappings
 func GetBackedUpControlMappings(version string) (*[]string, error) {
-	var items []string
-	gameDir, err := common.FindDir(RootDir, string(version))
-	if err != nil || gameDir == "" {
-		return &items, errors.New("unable to find game directory")
-	}
-
-	backupDir := filepath.Join(filepath.Dir(filepath.Dir(gameDir)), controlMappingsBackupDir, string(version))
-
+	backupDir := filepath.Join(AppDir, controlMappingsBackupDir, version)
 	files, err := os.ReadDir(backupDir)
 	if err != nil {
-		return &items, errors.New("unable to open backup directory")
+		return &[]string{}, errors.New("unable to open backup directory")
 	}
 
+	items := make([]string, 0, len(files))
 	for _, f := range files {
 		items = append(items, f.Name())
 	}
 	return &items, nil
 }
 
+// RestoreControlMappings - Restores a specified control mapping for a specific game version
 func RestoreControlMappings(version string, filename string) error {
-	gameDir, err := common.FindDir(RootDir, string(version))
-	if err != nil || gameDir == "" {
-		return errors.New("unable to find game directory")
-	}
-	mappingsDir := filepath.Join(gameDir, controlMappingsDir)
-	backupDir := filepath.Join(filepath.Dir(filepath.Dir(gameDir)), controlMappingsBackupDir, string(version))
+	mappingsDir := filepath.Join(GameDir, version, controlMappingsDir)
+	backupDir := filepath.Join(AppDir, controlMappingsBackupDir, version)
 	return restoreFiles(backupDir, mappingsDir, filename)
 }
 
+// BackupScreenshots - Backup all screenshots for specific game version
 func BackupScreenshots(version string) error {
-	gameDir, err := common.FindDir(RootDir, string(version))
-	if err != nil || gameDir == "" {
-		return errors.New("unable to find game directory")
-	}
-
-	fmt.Printf("\nGame directory found: %s\n", gameDir)
-	screenshotDir := filepath.Join(gameDir, screenshotsDir)
-	backupDir := filepath.Join(filepath.Dir(filepath.Dir(gameDir)), screenshotsBackupDir, string(version))
-	backupFiles(screenshotDir, backupDir, false, ".jpg")
-	return nil
+	screenshotDir := filepath.Join(GameDir, version, screenshotsDir)
+	backupDir := filepath.Join(AppDir, screenshotsBackupDir, version)
+	return backupFiles(screenshotDir, backupDir, false, ".jpg")
 }

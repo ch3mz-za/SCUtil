@@ -1,4 +1,4 @@
-package tabs
+package frontend
 
 import (
 	"fyne.io/fyne/v2"
@@ -9,7 +9,7 @@ import (
 	"github.com/ch3mz-za/SCUtil/pkg/scu"
 )
 
-func Backup(win fyne.Window) fyne.CanvasObject {
+func backup(win fyne.Window) fyne.CanvasObject {
 
 	const (
 		backupControlMappings string = "Backup Control Mappings"
@@ -38,10 +38,6 @@ func Backup(win fyne.Window) fyne.CanvasObject {
 			dialog.ShowError(err, win)
 		}
 	})
-
-	// TODO:
-	// - Change to Border Container
-	// - Add list of backed up files
 
 	return container.New(
 		layout.NewVBoxLayout(),
