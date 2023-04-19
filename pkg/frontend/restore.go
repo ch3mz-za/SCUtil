@@ -45,7 +45,6 @@ func restore(win fyne.Window) fyne.CanvasObject {
 		if err != nil {
 			dialog.ShowError(err, win)
 		}
-
 	}
 
 	btnRestore := widget.NewButton("restore", func() {

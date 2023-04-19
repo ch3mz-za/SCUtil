@@ -155,7 +155,7 @@ func GetBackedUpControlMappings(version string) (*[]string, error) {
 	backupDir := filepath.Join(AppDir, controlMappingsBackupDir, version)
 	files, err := os.ReadDir(backupDir)
 	if err != nil {
-		return nil, errors.New("unable to open backup directory")
+		return &[]string{}, errors.New("unable to open backup directory")
 	}
 
 	items := make([]string, 0, len(files))
