@@ -31,13 +31,14 @@ func settings(win fyne.Window, cfg *config.AppConfig) fyne.CanvasObject {
 				return
 			}
 
-			gameDirData.Set(list.Path())
-			if !scu.IsGameDirectory(list.Path()) {
+			gameDir := scu.FindGameDirectory(list.Path())
+			gameDirData.Set(gameDir)
+			if !scu.IsGameDirectory(gameDir) {
 				dialog.ShowError(errors.New("not a valid game directory"), win)
 				return
 			}
 
-			cfg.GameDir = list.Path()
+			cfg.GameDir = gameDir
 			config.WriteAppConfig(config.AppConfigPath, cfg)
 		}, win)
 	})

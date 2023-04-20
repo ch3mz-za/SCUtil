@@ -86,6 +86,14 @@ func backupFiles(sourceDir, destDir string, addTimestamp bool, filetypes ...stri
 	return nil
 }
 
+func FindGameDirectory(searchDir string) string {
+	gameDir, err := common.FindDir(searchDir, GameVerLIVE)
+	if err != nil {
+		return ""
+	}
+	return filepath.Dir(gameDir)
+}
+
 func IsGameDirectory(gameDir string) bool {
 	entries, err := os.ReadDir(gameDir)
 	if err != nil {
