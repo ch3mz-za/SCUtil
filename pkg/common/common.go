@@ -30,7 +30,7 @@ func FindDir(root, target string) (string, error) {
 			return nil
 		}
 
-		if dir.IsDir() && filepath.Base(path) == target {
+		if dir.IsDir() && strings.HasSuffix(path, target) {
 			gamePath = path
 			return nil
 		}

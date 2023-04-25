@@ -1,49 +1,69 @@
 package frontend
 
 import (
+	"path/filepath"
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/ch3mz-za/SCUtil/pkg/scu"
 )
 
 func backup(win fyne.Window) fyne.CanvasObject {
 
-	const (
-		backupControlMappings string = "Backup Control Mappings"
-		backupScreenshots     string = "Backup Screenshots"
-	)
+	backupFeatures := []struct {
+		label, dir string
+		fn         func(string) error
+		openOption int
+	}{
+		{label: "Backup Control Mappings", dir: scu.ControlMappingsBackupDir, fn: scu.BackupControlMappings, openOption: openExternally},
+		{label: "Backup Screenshots", dir: scu.ScreenshotsBackupDir, fn: scu.BackupScreenshots, openOption: openImage},
+		{label: "Backup USER directory", dir: scu.UserBackupDir, fn: scu.BackupUserDirectory, openOption: openExternally},
+	}
 
 	selectionGameVersion := widget.NewSelect([]string{scu.GameVerLIVE, scu.GameVerPTU}, func(value string) {})
 	selectionGameVersion.Selected = scu.GameVerLIVE
 
-	radioBackup := widget.NewRadioGroup([]string{backupControlMappings, backupScreenshots}, func(value string) {})
-	radioBackup.Selected = backupControlMappings
+	selectedBackupItem := 0
+	listBackupItems := widget.NewList(
+		func() int {
+			return len(backupFeatures)
+		},
 
-	btn := widget.NewButton("backup", func() {
-		var err error
-		switch radioBackup.Selected {
-		case backupControlMappings:
-			if err = scu.BackupControlMappings(selectionGameVersion.Selected); err == nil {
-				doneDiaglog(win)
-			}
-		case backupScreenshots:
-			if err = scu.BackupScreenshots(selectionGameVersion.Selected); err == nil {
-				doneDiaglog(win)
-			}
-		}
-		if err != nil {
+		func() fyne.CanvasObject {
+			btnFolder := widget.NewButton("", nil)
+			btnFolder.SetIcon(theme.FolderIcon())
+			return container.NewBorder(nil, nil, nil, btnFolder, widget.NewLabel("backup feature title"))
+		},
+
+		func(i widget.ListItemID, o fyne.CanvasObject) {
+			lbl := o.(*fyne.Container).Objects[0].(*widget.Label)
+			lbl.SetText(backupFeatures[i].label)
+
+			btn := o.(*fyne.Container).Objects[1].(*widget.Button)
+			btn.OnTapped = showOpenFileDialog(
+				filepath.Join(scu.AppDir, backupFeatures[i].dir, selectionGameVersion.Selected),
+				win,
+				backupFeatures[i].openOption)
+		})
+
+	listBackupItems.Select(selectedBackupItem)
+	listBackupItems.OnSelected = func(id int) { selectedBackupItem = id }
+
+	btnBackup := widget.NewButton("backup", func() {
+		if err := backupFeatures[selectedBackupItem].fn(selectionGameVersion.Selected); err != nil {
 			dialog.ShowError(err, win)
+			return
 		}
+		doneDiaglog(win)
 	})
 
-	return container.New(
-		layout.NewVBoxLayout(),
+	return container.NewBorder(
 		selectionGameVersion,
-		radioBackup,
-		layout.NewSpacer(),
-		btn,
+		btnBackup,
+		nil, nil,
+		listBackupItems,
 	)
 }

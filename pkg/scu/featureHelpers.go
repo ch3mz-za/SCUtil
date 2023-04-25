@@ -3,6 +3,8 @@ package scu
 import (
 	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,6 +43,7 @@ func restoreFiles(sourceDir, destDir, filename string) error {
 	return nil
 }
 
+// backupFiles
 func backupFiles(sourceDir, destDir string, addTimestamp bool, filetypes ...string) error {
 	files, err := os.ReadDir(sourceDir)
 	if err != nil {
@@ -86,9 +89,62 @@ func backupFiles(sourceDir, destDir string, addTimestamp bool, filetypes ...stri
 	return nil
 }
 
+func BackupDirectory(sourceDir, destDir string) error {
+
+	return filepath.Walk(sourceDir, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// copy to this path
+		outpath := filepath.Join(destDir, strings.TrimPrefix(path, sourceDir))
+
+		if info.IsDir() {
+			os.MkdirAll(outpath, info.Mode())
+			return nil // means recursive
+		}
+
+		// handle irregular files
+		if !info.Mode().IsRegular() {
+			switch info.Mode().Type() & os.ModeType {
+			case os.ModeSymlink:
+				link, err := os.Readlink(path)
+				if err != nil {
+					return err
+				}
+				return os.Symlink(link, outpath)
+			}
+			return nil
+		}
+
+		// copy contents of regular file efficiently
+
+		// open input
+		in, _ := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer in.Close()
+
+		// create output
+		fh, err := os.Create(outpath)
+		if err != nil {
+			return err
+		}
+		defer fh.Close()
+
+		// make it the same
+		fh.Chmod(info.Mode())
+
+		// copy content
+		_, err = io.Copy(fh, in)
+		return err
+	})
+}
+
 func FindGameDirectory(searchDir string) string {
-	gameDir, err := common.FindDir(searchDir, GameVerLIVE)
-	if err != nil {
+	gameDir, err := common.FindDir(searchDir, filepath.Join("StarCitizen", GameVerLIVE))
+	if err != nil && gameDir != "" {
 		return ""
 	}
 	return filepath.Dir(gameDir)
