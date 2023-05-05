@@ -19,10 +19,12 @@ const (
 	twoSecondDur     time.Duration = 2 * time.Second
 
 	// Directories
-	controlMappingsDir       string = "USER/Client/0/Controls/Mappings"
-	controlMappingsBackupDir string = "BACKUPS/ControlMappings"
-	screenshotsDir           string = "ScreenShots"
-	screenshotsBackupDir     string = "BACKUPS/Screenshots"
+	UserDir                  string = "USER"
+	UserBackupDir            string = "BACKUPS/UserFolder"
+	ControlMappingsDir       string = UserDir + "/Client/0/Controls/Mappings"
+	ControlMappingsBackupDir string = "BACKUPS/ControlMappings"
+	ScreenshotsDir           string = "ScreenShots"
+	ScreenshotsBackupDir     string = "BACKUPS/Screenshots"
 )
 
 var (
@@ -142,8 +144,8 @@ func ClearRsiLauncherAppData() *[]string {
 
 // BackupControlMappings - Backup game control mappings
 func BackupControlMappings(version string) error {
-	mappingsDir := filepath.Join(GameDir, version, controlMappingsDir)
-	backupDir := filepath.Join(AppDir, controlMappingsBackupDir, version)
+	mappingsDir := filepath.Join(GameDir, version, ControlMappingsDir)
+	backupDir := filepath.Join(AppDir, ControlMappingsBackupDir, version)
 	if err := backupFiles(mappingsDir, backupDir, true, ctrlMapFileExt); err != nil {
 		return err
 	}
@@ -152,7 +154,7 @@ func BackupControlMappings(version string) error {
 
 // GetBackedUpControlMappings - Retrieve a list of all the backed-up control mappings
 func GetBackedUpControlMappings(version string) (*[]string, error) {
-	backupDir := filepath.Join(AppDir, controlMappingsBackupDir, version)
+	backupDir := filepath.Join(AppDir, ControlMappingsBackupDir, version)
 	files, err := os.ReadDir(backupDir)
 	if err != nil {
 		return &[]string{}, errors.New("unable to open backup directory")
@@ -167,14 +169,21 @@ func GetBackedUpControlMappings(version string) (*[]string, error) {
 
 // RestoreControlMappings - Restores a specified control mapping for a specific game version
 func RestoreControlMappings(version string, filename string) error {
-	mappingsDir := filepath.Join(GameDir, version, controlMappingsDir)
-	backupDir := filepath.Join(AppDir, controlMappingsBackupDir, version)
+	mappingsDir := filepath.Join(GameDir, version, ControlMappingsDir)
+	backupDir := filepath.Join(AppDir, ControlMappingsBackupDir, version)
 	return restoreFiles(backupDir, mappingsDir, filename)
 }
 
 // BackupScreenshots - Backup all screenshots for specific game version
 func BackupScreenshots(version string) error {
-	screenshotDir := filepath.Join(GameDir, version, screenshotsDir)
-	backupDir := filepath.Join(AppDir, screenshotsBackupDir, version)
+	screenshotDir := filepath.Join(GameDir, version, ScreenshotsDir)
+	backupDir := filepath.Join(AppDir, ScreenshotsBackupDir, version)
 	return backupFiles(screenshotDir, backupDir, false, ".jpg")
+}
+
+// BackupUserDirectory - Backup the USER directory
+func BackupUserDirectory(version string) error {
+	userDir := filepath.Join(GameDir, version, UserDir)
+	backupDir := filepath.Join(AppDir, UserBackupDir, version, UserDir)
+	return BackupDirectory(userDir, backupDir)
 }

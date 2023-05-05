@@ -42,33 +42,36 @@ Utility that does some useful things with your Star Citizen directory
 
 ### 1.8. Backup and restore control mapping
 
-> This does a backup of your game's custom control mappings as well as give you the option to restore previously backed up control mappings.
+> This does a backup of your game's custom control mappings and stores it within the `BACKUPS` folder as well as give you the option to restore previously backed up control mappings.
 > The backup location can be found in the parent directory of your Star Citizen game files.
 
 ### 1.9. Backup screenshots
 
-> This gives the user the ability to backup their Star Citizen screenshots.
+> This gives the user the ability to backup their Star Citizen screenshots within the `BACKUPS` folder.
+
+### 1.10. Backup USER directory
+
+> This will store a copy of the game's USER directory within the `BACKUPS` folder.
 
 ## 2. Running SCUtil
 
 ### 2.1. Executable
 
-Simply download the release and place place `SCUtil.exe` within a folder located in one of the parent directories of your `Star Citizen` folder:
+Simply download the release and place `SCUtil.exe` within any folder of your choosing. Set your game directory in setting. A `config.toml` file should appear within the root directory of the `SCUtil.exe`. Below is a breakdown of the app's directory.
 
 ```txt
-Your_Game_Dir
-│
-└───SCUtil
-│   │   SCUtil.exe
-│   
-└───Star Citizen
-│   └───LIVE
-│   └───PTU
-│
-└───RSI Launcher
-```
+SomeDirectory
+│   SCUtil.exe
+│   config.toml
+└───BACKUPS
+    └───Screenshots
+    │   └───LIVE
+    │   └───PTU
+    └───ControlMappings
+        └───LIVE
+        └───PTU
 
-From here you can run it and perform the tasks as required.
+```
 
 ### 2.2. Compile & Run SCUtil
 
