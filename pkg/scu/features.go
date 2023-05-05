@@ -171,7 +171,7 @@ func GetBackedUpControlMappings(version string) (*[]string, error) {
 func RestoreControlMappings(version string, filename string) error {
 	mappingsDir := filepath.Join(GameDir, version, ControlMappingsDir)
 	backupDir := filepath.Join(AppDir, ControlMappingsBackupDir, version)
-	return restoreFiles(backupDir, mappingsDir, filename)
+	return restoreFile(backupDir, mappingsDir, filename)
 }
 
 // BackupScreenshots - Backup all screenshots for specific game version
