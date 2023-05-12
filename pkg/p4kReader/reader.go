@@ -17,11 +17,9 @@ func GetP4kFilenames(gameDir, outputDir string) error {
 	}
 	defer r.Close()
 
-	MakeDir(outputDir)
+	MakeDir(filepath.Dir(outputDir))
 
-	filename := filepath.Join(outputDir, "P4k_filenames.txt")
-
-	p4kFileNameFile, err := os.Create(filename)
+	p4kFileNameFile, err := os.Create(outputDir)
 	if err != nil {
 		return fmt.Errorf("unable to create p4k filenames file:\n %s", err.Error())
 	}

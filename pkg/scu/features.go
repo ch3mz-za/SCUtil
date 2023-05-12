@@ -13,10 +13,8 @@ import (
 )
 
 const (
-	p4kFileNameDir   string        = "./p4k_filenames"
-	p4kSearchResults string        = "./p4k_search_results"
-	ctrlMapFileExt   string        = ".xml"
-	twoSecondDur     time.Duration = 2 * time.Second
+	ctrlMapFileExt string        = ".xml"
+	twoSecondDur   time.Duration = 2 * time.Second
 
 	// Directories
 	UserDir                  string = "USER"
@@ -25,6 +23,8 @@ const (
 	ControlMappingsBackupDir string = "BACKUPS/ControlMappings"
 	ScreenshotsDir           string = "ScreenShots"
 	ScreenshotsBackupDir     string = "BACKUPS/Screenshots"
+	P4kSearchResultsDir      string = "P4kResults/Searches"
+	P4kFilenameResultsDir    string = "P4kResults/AllFileNames/AllP4kFilenames.txt"
 )
 
 var (
@@ -87,8 +87,8 @@ func ClearUserFolder(version string, exclusionsEnabled bool) error {
 // GetP4kFilenames - Gets all the filenames from the Data.p4k file and writes them to a specific folder
 func GetP4kFilenames(version string) error {
 	gameDir := filepath.Join(GameDir, version)
-	p4k.GetP4kFilenames(gameDir, p4kFileNameDir)
-	return nil
+	resultsDir := filepath.Join(AppDir, P4kFilenameResultsDir, version)
+	return p4k.GetP4kFilenames(gameDir, resultsDir)
 }
 
 // SearchP4kFilenames - Search for specific filenames within the Data.p4k file
@@ -100,8 +100,9 @@ func SearchP4kFilenames(version, phrase string) error {
 	}
 
 	filename := strings.ReplaceAll(phrase, "\\", "_") + ".txt"
-	p4k.MakeDir(p4kSearchResults)
-	p4k.WriteStringsToFile(filepath.Join(p4kSearchResults, filename), results)
+	resultsDir := filepath.Join(AppDir, P4kSearchResultsDir, version)
+	p4k.MakeDir(resultsDir)
+	p4k.WriteStringsToFile(filepath.Join(resultsDir, filename), results)
 	return nil
 }
 
@@ -152,10 +153,9 @@ func BackupControlMappings(version string) error {
 	return nil
 }
 
-// GetBackedUpControlMappings - Retrieve a list of all the backed-up control mappings
-func GetBackedUpControlMappings(version string) (*[]string, error) {
-	backupDir := filepath.Join(AppDir, ControlMappingsBackupDir, version)
-	files, err := os.ReadDir(backupDir)
+// GetFilesListFromDir - Retrieve a list of all the files listed at a directory
+func GetFilesListFromDir(dir string) (*[]string, error) {
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return &[]string{}, errors.New("unable to open backup directory")
 	}
@@ -167,11 +167,16 @@ func GetBackedUpControlMappings(version string) (*[]string, error) {
 	return &items, nil
 }
 
+// GetBackedUpControlMappings - Retrieve a list of all the backed-up control mappings
+func GetBackedUpControlMappings(version string) (*[]string, error) {
+	return GetFilesListFromDir(filepath.Join(AppDir, ControlMappingsBackupDir, version))
+}
+
 // RestoreControlMappings - Restores a specified control mapping for a specific game version
 func RestoreControlMappings(version string, filename string) error {
-	mappingsDir := filepath.Join(GameDir, version, ControlMappingsDir)
-	backupDir := filepath.Join(AppDir, ControlMappingsBackupDir, version)
-	return restoreFile(backupDir, mappingsDir, filename)
+	mappingsFilePath := filepath.Join(GameDir, version, ControlMappingsDir, filename)
+	backupFilePath := filepath.Join(AppDir, ControlMappingsBackupDir, version, filename)
+	return restoreFile(backupFilePath, mappingsFilePath, true)
 }
 
 // BackupScreenshots - Backup all screenshots for specific game version

@@ -18,13 +18,17 @@ func doneDiaglog(win fyne.Window) {
 }
 
 func resetToDefaultWindowSize(win fyne.Window) {
-	win.Resize(fyne.Size{Width: 400, Height: 310})
+	win.Resize(DefaultAppWinSize)
 }
 
 const (
 	openExternally = iota
 	openImage
 	openText
+)
+
+var (
+	DefaultAppWinSize fyne.Size = fyne.NewSize(500, 450)
 )
 
 func showOpenFileDialog(dirPath string, win fyne.Window, openOpt int) func() {
@@ -53,7 +57,7 @@ func showOpenFileDialog(dirPath string, win fyne.Window, openOpt int) func() {
 
 		uri, err := storage.ListerForURI(storage.NewFileURI(dirPath))
 		if err != nil {
-			dialog.ShowError(err, win)
+			dialog.ShowError(errors.New("directory does not exist yet"), win)
 			resetToDefaultWindowSize(win)
 			return
 		}
