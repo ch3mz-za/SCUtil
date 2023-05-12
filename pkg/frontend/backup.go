@@ -52,7 +52,7 @@ func backup(win fyne.Window) fyne.CanvasObject {
 	listBackupItems.Select(selectedBackupItem)
 	listBackupItems.OnSelected = func(id int) { selectedBackupItem = id }
 
-	btnBackup := widget.NewButton("backup", func() {
+	btnBackup := widget.NewButton("Backup", func() {
 		if err := backupFeatures[selectedBackupItem].fn(selectionGameVersion.Selected); err != nil {
 			dialog.ShowError(err, win)
 			return
@@ -60,10 +60,10 @@ func backup(win fyne.Window) fyne.CanvasObject {
 		doneDiaglog(win)
 	})
 
-	return container.NewBorder(
+	return widget.NewCard("", "", container.NewBorder(
 		selectionGameVersion,
 		btnBackup,
 		nil, nil,
 		listBackupItems,
-	)
+	))
 }
