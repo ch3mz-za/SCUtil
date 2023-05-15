@@ -15,8 +15,17 @@ import (
 	"github.com/skratchdot/open-golang/open"
 )
 
+func getSearchResults(resultsDir string, win fyne.Window) *[]string {
+	items, err := scu.GetFilesListFromDir(resultsDir)
+	if err != nil {
+		dialog.ShowError(err, win)
+	}
+	return items
+}
+
 func p4kData(win fyne.Window) fyne.CanvasObject {
 
+	var searchResultsDir string
 	btnOpenP4kFilenames := widget.NewButtonWithIcon("", theme.FileTextIcon(), func() {
 		open.Run(filepath.Join(scu.AppDir))
 	})
@@ -31,13 +40,16 @@ func p4kData(win fyne.Window) fyne.CanvasObject {
 		}
 
 		// Get list of search results
-		items, err := scu.GetFilesListFromDir(filepath.Join(scu.AppDir, scu.P4kSearchResultsDir, value))
-		if err != nil {
-			dialog.ShowError(err, win)
+		searchResultsDir = filepath.Join(scu.AppDir, scu.P4kSearchResultsDir, value)
+		if !common.Exists(searchResultsDir) {
+			common.MakeDir(searchResultsDir)
 		}
-		searchData.Set(*items)
+
+		// Set search results
+		searchData.Set(*getSearchResults(searchResultsDir, win))
 	})
 
+	// search result list
 	searchList := widget.NewListWithData(searchData,
 		func() fyne.CanvasObject {
 			return widget.NewLabel("template")
@@ -46,10 +58,19 @@ func p4kData(win fyne.Window) fyne.CanvasObject {
 			o.(*widget.Label).Bind(i.(binding.String))
 		})
 
+	// TODO: Only do this if there are items in this list
+	// setup selected item in list
+	var selectedSearchResult int
+	searchList.OnSelected = func(id widget.ListItemID) {
+		selectedSearchResult = id
+	}
+
+	// progressbar
 	progress := widget.NewProgressBarInfinite()
 	progress.Stop()
 	progress.Hide()
 
+	// search button
 	entrySearch := widget.NewEntry()
 	btnSearch := widget.NewButton("Search P4k", func() {
 		toggleProgress(progress)
@@ -68,12 +89,22 @@ func p4kData(win fyne.Window) fyne.CanvasObject {
 		searchData.Set(*items)
 	})
 
+	// delete search result button
 	btnDelete := widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
 
 	})
 
+	// open search result button
 	btnOpenSearchResult := widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
+		itemToBeOpened, err := searchData.GetValue(selectedSearchResult)
+		if err != nil {
+			dialog.ShowError(err, win)
+			return
+		}
 
+		if err := open.Run(filepath.Join(searchResultsDir, itemToBeOpened)); err != nil {
+			dialog.ShowError(err, win)
+		}
 	})
 
 	searchResLabel := widget.NewLabel("Search Results")
@@ -106,6 +137,7 @@ func p4kData(win fyne.Window) fyne.CanvasObject {
 		progress,
 	)
 
+	// TODO: replace searchList with scrollable list - list can get too long for the view
 	return widget.NewCard("", "", container.NewBorder(top, bottom, nil, nil, searchList))
 }
 

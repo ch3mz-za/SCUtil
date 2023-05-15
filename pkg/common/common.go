@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"io"
 	"io/fs"
 	"io/ioutil"
@@ -80,5 +81,13 @@ func Exists(path string) bool {
 		return false
 	} else {
 		return true
+	}
+}
+
+func MakeDir(dir string) {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+			fmt.Printf("Unable to create directory: %s - Error: %s", dir, err.Error())
+		}
 	}
 }

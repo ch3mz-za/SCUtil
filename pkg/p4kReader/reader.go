@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/ch3mz-za/SCUtil/pkg/common"
 )
 
 const dataP4k = "Data.p4k"
@@ -17,7 +19,7 @@ func GetP4kFilenames(gameDir, outputDir string) error {
 	}
 	defer r.Close()
 
-	MakeDir(filepath.Dir(outputDir))
+	common.MakeDir(filepath.Dir(outputDir))
 
 	p4kFileNameFile, err := os.Create(outputDir)
 	if err != nil {
@@ -29,12 +31,4 @@ func GetP4kFilenames(gameDir, outputDir string) error {
 		p4kFileNameFile.WriteString(f.Name + "\n")
 	}
 	return nil
-}
-
-func MakeDir(dir string) {
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		if err := os.Mkdir(dir, os.ModePerm); err != nil {
-			fmt.Printf("Unable to create directory: %s - Error: %s", dir, err.Error())
-		}
-	}
 }

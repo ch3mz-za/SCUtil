@@ -101,7 +101,7 @@ func SearchP4kFilenames(version, phrase string) error {
 
 	filename := strings.ReplaceAll(phrase, "\\", "_") + ".txt"
 	resultsDir := filepath.Join(AppDir, P4kSearchResultsDir, version)
-	p4k.MakeDir(resultsDir)
+	common.MakeDir(resultsDir)
 	p4k.WriteStringsToFile(filepath.Join(resultsDir, filename), results)
 	return nil
 }
