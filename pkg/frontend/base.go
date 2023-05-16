@@ -27,12 +27,12 @@ func SetupMainWindowContent(w fyne.Window) fyne.CanvasObject {
 		scu.GameDir = cfg.GameDir
 	}
 
-	tabSettings := container.NewTabItem("Settings", settings(w, cfg))
+	tabSettings := container.NewTabItemWithIcon("Settings", theme.SettingsIcon(), settings(w, cfg))
 	mainTabs := container.NewAppTabs(
 		container.NewTabItemWithIcon("Backup", theme.StorageIcon(), backup(w)),
 		container.NewTabItemWithIcon("Clean", theme.DeleteIcon(), clearGameData(w)),
-		container.NewTabItemWithIcon("Restore", theme.UploadIcon(), restore(w)),
-		container.NewTabItem("Advanced", advanced(w)),
+		container.NewTabItemWithIcon("Restore", theme.HistoryIcon(), restore(w)),
+		container.NewTabItemWithIcon("Data", theme.FileApplicationIcon(), p4kData(w)),
 		tabSettings,
 	)
 	mainTabs.SetTabLocation(container.TabLocationLeading)

@@ -3,6 +3,7 @@ package frontend
 import (
 	"fmt"
 	"log"
+	"path/filepath"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -17,7 +18,7 @@ func restore(win fyne.Window) fyne.CanvasObject {
 	restoreData := binding.BindStringList(&[]string{})
 
 	selectionGameVersion := widget.NewSelect([]string{scu.GameVerLIVE, scu.GameVerPTU}, func(value string) {
-		items, err := scu.GetBackedUpControlMappings(value)
+		items, err := scu.GetFilesListFromDir(filepath.Join(scu.AppDir, scu.ControlMappingsBackupDir, value))
 		if err != nil {
 			dialog.ShowError(err, win)
 		}
@@ -47,7 +48,7 @@ func restore(win fyne.Window) fyne.CanvasObject {
 		}
 	}
 
-	btnRestore := widget.NewButton("restore", func() {
+	btnRestore := widget.NewButton("Restore", func() {
 		log.Printf("Restore: %s\n", itemToBeRestored)
 		if err = scu.RestoreControlMappings(selectionGameVersion.Selected, itemToBeRestored); err != nil {
 			dialog.ShowError(err, win)
@@ -56,5 +57,5 @@ func restore(win fyne.Window) fyne.CanvasObject {
 		}
 	})
 
-	return container.NewBorder(top, btnRestore, nil, nil, restoreList)
+	return widget.NewCard("", "", container.NewBorder(top, btnRestore, nil, nil, restoreList))
 }

@@ -22,9 +22,9 @@ func settings(win fyne.Window, cfg *config.AppConfig) fyne.CanvasObject {
 	progressBar.Hide()
 
 	btnSetGameDir := widget.NewButton("", func() {
-		win.Resize(fyne.NewSize(700, 500))
+		enlargeWindowForDialog(win)
 		dialog.ShowFolderOpen(func(list fyne.ListableURI, err error) {
-			defer resetToDefaultWindowSize(win)
+			defer resetToUserWindowSize(win)
 			progressBar.Show()
 			defer progressBar.Hide()
 
@@ -36,7 +36,7 @@ func settings(win fyne.Window, cfg *config.AppConfig) fyne.CanvasObject {
 				return
 			}
 
-			resetToDefaultWindowSize(win)
+			resetToUserWindowSize(win)
 			gameDir := scu.FindGameDirectory(list.Path())
 			if gameDir == "" {
 				dialog.ShowError(errors.New("could not find game directory"), win)

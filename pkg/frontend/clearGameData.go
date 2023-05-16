@@ -7,7 +7,6 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 	"github.com/ch3mz-za/SCUtil/pkg/scu"
 )
@@ -21,6 +20,13 @@ func clearGameData(win fyne.Window) fyne.CanvasObject {
 		clearRsiLauncherAppData string = "Clear RSI Launcher AppData"
 	)
 
+	clearFeatures := []string{
+		clearAlldataExceptP4k,
+		clearUserData,
+		clearStarCitizenAppData,
+		clearRsiLauncherAppData,
+	}
+
 	dropDownGameVersion := widget.NewSelect([]string{scu.GameVerLIVE, scu.GameVerPTU}, func(value string) {})
 	dropDownGameVersion.Selected = scu.GameVerLIVE
 	dropDownGameVersion.Hidden = true
@@ -28,22 +34,31 @@ func clearGameData(win fyne.Window) fyne.CanvasObject {
 	checkRemoveControlMappings := widget.NewCheck("Remove Control Mappings", func(value bool) {})
 	checkRemoveControlMappings.Hidden = true
 
-	radioGroup := widget.NewRadioGroup([]string{clearStarCitizenAppData, clearRsiLauncherAppData, clearUserData, clearAlldataExceptP4k}, func(value string) {
-		checkRemoveControlMappings.Hidden = value != clearUserData
-		dropDownGameVersion.Hidden = value != clearAlldataExceptP4k && value != clearUserData
-	})
-	radioGroup.Selected = clearStarCitizenAppData
+	selectedBackupItem := 0
+	listClearItems := widget.NewList(
+		func() int {
+			return len(clearFeatures)
+		},
 
-	top := container.New(
-		layout.NewVBoxLayout(),
-		radioGroup,
-		dropDownGameVersion,
-		checkRemoveControlMappings,
-	)
+		func() fyne.CanvasObject {
+			return widget.NewLabel("backup feature title")
+		},
 
-	bottom := widget.NewButton("clear", func() {
+		func(i widget.ListItemID, o fyne.CanvasObject) {
+			o.(*widget.Label).SetText(clearFeatures[i])
+		})
+
+	listClearItems.Select(selectedBackupItem)
+	listClearItems.OnSelected = func(id int) {
+		selectedBackupItem = id
+		checkRemoveControlMappings.Hidden = clearFeatures[id] != clearUserData
+		dropDownGameVersion.Hidden = clearFeatures[id] != clearAlldataExceptP4k && clearFeatures[id] != clearUserData
+
+	}
+
+	btnClear := widget.NewButton("Clear", func() {
 		var err error
-		switch radioGroup.Selected {
+		switch clearFeatures[selectedBackupItem] {
 		case clearStarCitizenAppData:
 			var removedFiles *[]string
 			removedFiles, err = scu.ClearStarCitizenAppData()
@@ -76,5 +91,12 @@ func clearGameData(win fyne.Window) fyne.CanvasObject {
 		}
 	})
 
-	return container.NewBorder(top, bottom, nil, nil, layout.NewSpacer())
+	bottom := container.NewVBox(btnClear)
+	return widget.NewCard("", "", container.NewBorder(
+		nil, bottom, nil, nil,
+		container.NewGridWithRows(2,
+			listClearItems,
+			container.NewVBox(dropDownGameVersion, checkRemoveControlMappings),
+		),
+	))
 }

@@ -13,25 +13,54 @@ import (
 	"github.com/skratchdot/open-golang/open"
 )
 
-func doneDiaglog(win fyne.Window) {
-	dialog.ShowInformation("Status", "Completed successfully", win)
-}
-
-func resetToDefaultWindowSize(win fyne.Window) {
-	win.Resize(fyne.Size{Width: 400, Height: 310})
-}
-
 const (
 	openExternally = iota
 	openImage
 	openText
 )
 
+var (
+	DefaultAppWinSize fyne.Size = fyne.NewSize(500, 450)
+	UserPreferredSize fyne.Size = fyne.NewSize(500, 450)
+)
+
+func doneDiaglog(win fyne.Window) {
+	dialog.ShowInformation("Status", "Completed successfully", win)
+}
+
+func resetToDefaultWindowSize(win fyne.Window) {
+	win.Resize(DefaultAppWinSize)
+}
+
+func resetToUserWindowSize(win fyne.Window) {
+	win.Resize(UserPreferredSize)
+}
+
+func enlargeWindowForDialog(win fyne.Window) {
+	UserPreferredSize = fyne.NewSize(
+		win.Canvas().Size().Width,
+		win.Canvas().Size().Height,
+	)
+
+	var w float32 = 700
+	var h float32 = 500
+
+	if win.Canvas().Size().Width > w {
+		w = win.Canvas().Size().Width
+	}
+
+	if win.Canvas().Size().Height > h {
+		h = win.Canvas().Size().Height
+	}
+
+	win.Resize(fyne.NewSize(w, h))
+}
+
 func showOpenFileDialog(dirPath string, win fyne.Window, openOpt int) func() {
 	return func() {
-		win.Resize(fyne.NewSize(700, 500))
+		enlargeWindowForDialog(win)
 		folderDiag := dialog.NewFileOpen(func(reader fyne.URIReadCloser, err error) {
-			defer resetToDefaultWindowSize(win)
+			defer resetToUserWindowSize(win)
 			if err != nil {
 				dialog.ShowError(err, win)
 				return
@@ -53,8 +82,8 @@ func showOpenFileDialog(dirPath string, win fyne.Window, openOpt int) func() {
 
 		uri, err := storage.ListerForURI(storage.NewFileURI(dirPath))
 		if err != nil {
-			dialog.ShowError(err, win)
-			resetToDefaultWindowSize(win)
+			dialog.ShowError(errors.New("directory does not exist yet"), win)
+			resetToUserWindowSize(win)
 			return
 		}
 

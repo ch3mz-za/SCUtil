@@ -74,8 +74,6 @@ func SearchP4kFilenames(gameDir, phrase string) (*[]string, error) {
 }
 
 func findInFile(phrase, filePath string, resultsChan chan string) {
-	// defer wg.Done()
-
 	file, err := os.Open(filePath)
 	if err != nil {
 		log.Fatal(err)

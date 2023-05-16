@@ -18,32 +18,35 @@ const (
 	GameVerPTU  string = "PTU"
 )
 
-func restoreFiles(sourceDir, destDir, filename string) error {
+// restoreFile - restores a single file with the ability to strip away the timestamp, if included
+func restoreFile(src, dst string, stripTimestamp bool) error {
 
-	if _, err := os.Stat(destDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(destDir, 0755); err != nil {
-			return errors.New("unable to create control mappings directory")
+	// create backup directory if it does not exist
+	dstDir := filepath.Dir(dst)
+	if _, err := os.Stat(dstDir); os.IsNotExist(err) {
+		if err := os.MkdirAll(dst, 0755); err != nil {
+			return errors.New("unable to create destination directory")
 		}
 	}
 
-	restoreFileName := filename
-	split := strings.Split(strings.TrimSuffix(restoreFileName, ctrlMapFileExt), "-")
+	restoreFileName := filepath.Base(dst)
 
-	// Remove backup timestamp
-	if splitCnt := len(split); splitCnt >= 3 {
-		restoreFileName = strings.Join(split[:splitCnt-2], "-") + ctrlMapFileExt
+	// remove backup timestamp
+	if stripTimestamp {
+		split := strings.Split(strings.TrimSuffix(restoreFileName, ctrlMapFileExt), "-")
+		if splitCnt := len(split); splitCnt >= 3 {
+			restoreFileName = strings.Join(split[:splitCnt-2], "-") + ctrlMapFileExt
+		}
 	}
 
-	if err := common.CopyFile(
-		filepath.Join(sourceDir, string(filename)), // src
-		filepath.Join(destDir, restoreFileName),    // dst
-	); err != nil {
+	// copy over the file
+	if err := common.CopyFile(src, filepath.Join(dstDir, restoreFileName)); err != nil {
 		return fmt.Errorf("restore error:\n %s", err.Error())
 	}
 	return nil
 }
 
-// backupFiles
+// backupFiles - backup files of a certain file type and add a timestamp if necessary
 func backupFiles(sourceDir, destDir string, addTimestamp bool, filetypes ...string) error {
 	files, err := os.ReadDir(sourceDir)
 	if err != nil {
