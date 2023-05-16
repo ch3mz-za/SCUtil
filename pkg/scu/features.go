@@ -24,7 +24,7 @@ const (
 	ScreenshotsDir           string = "ScreenShots"
 	ScreenshotsBackupDir     string = "BACKUPS/Screenshots"
 	P4kSearchResultsDir      string = "P4kResults/Searches"
-	P4kFilenameResultsDir    string = "P4kResults/AllFileNames/AllP4kFilenames.txt"
+	P4kFilenameResultsDir    string = "P4kResults/AllFileNames/%s/AllP4kFilenames.txt"
 )
 
 var (
@@ -87,7 +87,7 @@ func ClearUserFolder(version string, exclusionsEnabled bool) error {
 // GetP4kFilenames - Gets all the filenames from the Data.p4k file and writes them to a specific folder
 func GetP4kFilenames(version string) error {
 	gameDir := filepath.Join(GameDir, version)
-	resultsDir := filepath.Join(AppDir, P4kFilenameResultsDir, version)
+	resultsDir := filepath.Join(AppDir, fmt.Sprintf(P4kFilenameResultsDir, version))
 	return p4k.GetP4kFilenames(gameDir, resultsDir)
 }
 
@@ -157,7 +157,7 @@ func BackupControlMappings(version string) error {
 func GetFilesListFromDir(dir string) (*[]string, error) {
 	files, err := os.ReadDir(dir)
 	if err != nil {
-		return &[]string{}, errors.New("unable to open backup directory")
+		return &[]string{}, errors.New("no backup directory found")
 	}
 
 	items := make([]string, 0, len(files))

@@ -1,7 +1,11 @@
 package frontend
 
 import (
+	"errors"
+	"fmt"
+	"os"
 	"path/filepath"
+	"runtime"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -26,28 +30,51 @@ func getSearchResults(resultsDir string, win fyne.Window) *[]string {
 func p4kData(win fyne.Window) fyne.CanvasObject {
 
 	var searchResultsDir string
-	btnOpenP4kFilenames := widget.NewButtonWithIcon("", theme.FileTextIcon(), func() {
-		open.Run(filepath.Join(scu.AppDir))
-	})
-	btnOpenP4kFilenames.Disabled()
-
+	var selectedSearchResult int = -1
 	searchData := binding.BindStringList(&[]string{})
-	selectionGameVersion := widget.NewSelect([]string{scu.GameVerLIVE, scu.GameVerPTU}, func(value string) {
-		// Set P4k filename open buttin state
-		btnOpenP4kFilenames.Disable()
-		if common.Exists(filepath.Join(scu.AppDir, scu.P4kFilenameResultsDir, value)) {
-			btnOpenP4kFilenames.Enable()
-		}
 
-		// Get list of search results
-		searchResultsDir = filepath.Join(scu.AppDir, scu.P4kSearchResultsDir, value)
-		if !common.Exists(searchResultsDir) {
-			common.MakeDir(searchResultsDir)
-		}
-
-		// Set search results
-		searchData.Set(*getSearchResults(searchResultsDir, win))
+	// open p4k filenames button
+	var p4kFilenamesResult string
+	btnOpenP4kFilenames := widget.NewButtonWithIcon("", theme.FileTextIcon(), func() {
+		open.Run(p4kFilenamesResult)
 	})
+	btnOpenP4kFilenames.Disable()
+
+	// open search result button
+	btnOpenSearchResult := widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
+		itemToBeOpened, err := searchData.GetValue(selectedSearchResult)
+		if err != nil {
+			dialog.ShowError(err, win)
+			return
+		}
+
+		if err := open.Run(filepath.Join(searchResultsDir, itemToBeOpened)); err != nil {
+			dialog.ShowError(err, win)
+		}
+	})
+	btnOpenSearchResult.Disable()
+
+	// delete search result button
+	btnDelete := widget.NewButtonWithIcon("", theme.DeleteIcon(), nil)
+	btnDelete.OnTapped = func() {
+		itemToBeDeleted, err := searchData.GetValue(selectedSearchResult)
+		if err != nil {
+			dialog.ShowError(err, win)
+			return
+		}
+
+		if err := os.Remove(filepath.Join(searchResultsDir, itemToBeDeleted)); err != nil {
+			dialog.ShowError(err, win)
+			return
+		}
+
+		searchData.Set(*getSearchResults(searchResultsDir, win))
+		if searchData.Length() == 0 {
+			btnDelete.Disable()
+			btnOpenSearchResult.Disable()
+		}
+	}
+	btnDelete.Disable()
 
 	// search result list
 	searchList := widget.NewListWithData(searchData,
@@ -56,14 +83,38 @@ func p4kData(win fyne.Window) fyne.CanvasObject {
 		},
 		func(i binding.DataItem, o fyne.CanvasObject) {
 			o.(*widget.Label).Bind(i.(binding.String))
+
 		})
 
-	// TODO: Only do this if there are items in this list
 	// setup selected item in list
-	var selectedSearchResult int
 	searchList.OnSelected = func(id widget.ListItemID) {
 		selectedSearchResult = id
+		btnDelete.Enable()
+		btnOpenSearchResult.Enable()
 	}
+
+	selectionGameVersion := widget.NewSelect([]string{scu.GameVerLIVE, scu.GameVerPTU}, func(value string) {
+		// set P4k filename open button state
+		btnOpenP4kFilenames.Disable()
+		p4kFilenamesResult = filepath.Join(scu.AppDir, fmt.Sprintf(scu.P4kFilenameResultsDir, value))
+		if common.Exists(p4kFilenamesResult) {
+			btnOpenP4kFilenames.Enable()
+		}
+
+		// set list of search results
+		searchResultsDir = filepath.Join(scu.AppDir, scu.P4kSearchResultsDir, value)
+		if !common.Exists(searchResultsDir) {
+			common.MakeDir(searchResultsDir)
+		}
+
+		// set search results and button states
+		searchData.Set(*getSearchResults(searchResultsDir, win))
+		btnDelete.Disable()
+		btnOpenSearchResult.Disable()
+
+		selectedSearchResult = -1
+		searchList.UnselectAll()
+	})
 
 	// progressbar
 	progress := widget.NewProgressBarInfinite()
@@ -72,7 +123,13 @@ func p4kData(win fyne.Window) fyne.CanvasObject {
 
 	// search button
 	entrySearch := widget.NewEntry()
+	entrySearch.SetPlaceHolder("Enter phrase here")
 	btnSearch := widget.NewButton("Search P4k", func() {
+		if selectionGameVersion.Selected != scu.GameVerLIVE && selectionGameVersion.Selected != scu.GameVerPTU {
+			dialog.ShowError(errors.New("no game version selected"), win)
+			return
+		}
+
 		toggleProgress(progress)
 		defer toggleProgress(progress)
 		if err := scu.SearchP4kFilenames(selectionGameVersion.Selected, entrySearch.Text); err != nil {
@@ -87,24 +144,8 @@ func p4kData(win fyne.Window) fyne.CanvasObject {
 			dialog.ShowError(err, win)
 		}
 		searchData.Set(*items)
-	})
-
-	// delete search result button
-	btnDelete := widget.NewButtonWithIcon("", theme.DeleteIcon(), func() {
-
-	})
-
-	// open search result button
-	btnOpenSearchResult := widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
-		itemToBeOpened, err := searchData.GetValue(selectedSearchResult)
-		if err != nil {
-			dialog.ShowError(err, win)
-			return
-		}
-
-		if err := open.Run(filepath.Join(searchResultsDir, itemToBeOpened)); err != nil {
-			dialog.ShowError(err, win)
-		}
+		entrySearch.SetText("")
+		runtime.GC()
 	})
 
 	searchResLabel := widget.NewLabel("Search Results")
@@ -127,18 +168,17 @@ func p4kData(win fyne.Window) fyne.CanvasObject {
 			dialog.ShowError(err, win)
 		} else {
 			doneDiaglog(win)
+			btnOpenP4kFilenames.Enable()
 		}
+		runtime.GC()
 	})
-
-	btnOpenP4kFilenames.Disable()
 
 	bottom := container.NewVBox(
 		container.NewBorder(nil, nil, nil, btnOpenP4kFilenames, btnGetP4kFilenames),
 		progress,
 	)
 
-	// TODO: replace searchList with scrollable list - list can get too long for the view
-	return widget.NewCard("", "", container.NewBorder(top, bottom, nil, nil, searchList))
+	return widget.NewCard("", "", container.NewBorder(top, bottom, nil, nil, container.NewVScroll(searchList)))
 }
 
 func toggleProgress(p *widget.ProgressBarInfinite) {
