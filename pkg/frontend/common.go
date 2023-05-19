@@ -82,7 +82,7 @@ func showOpenFileDialog(dirPath string, win fyne.Window, openOpt int) func() {
 
 		uri, err := storage.ListerForURI(storage.NewFileURI(dirPath))
 		if err != nil {
-			dialog.ShowError(errors.New("directory does not exist yet"), win)
+			dialog.ShowError(errors.New("No directory found. Perform a backup first."), win)
 			resetToUserWindowSize(win)
 			return
 		}
