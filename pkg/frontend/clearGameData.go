@@ -21,10 +21,10 @@ func clearGameData(win fyne.Window) fyne.CanvasObject {
 	)
 
 	clearFeatures := []string{
-		clearAlldataExceptP4k,
-		clearUserData,
 		clearStarCitizenAppData,
 		clearRsiLauncherAppData,
+		clearUserData,
+		clearAlldataExceptP4k,
 	}
 
 	dropDownGameVersion := widget.NewSelect([]string{scu.GameVerLIVE, scu.GameVerPTU}, func(value string) {})
