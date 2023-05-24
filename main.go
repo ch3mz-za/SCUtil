@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+	// _ "net/http/pprof"
 
 	"fyne.io/fyne/v2/app"
 
@@ -12,6 +13,12 @@ import (
 const version string = "v2.3.1"
 
 func main() {
+
+	// defer profile.Start(profile.MemProfile).Stop()
+
+	// go func() {
+	// 	http.ListenAndServe(":8080", nil)
+	// }()
 
 	a := app.NewWithID("SCUtil")
 

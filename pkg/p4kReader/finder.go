@@ -18,12 +18,12 @@ type SearchBorder struct {
 	Stop  int
 }
 
-func searchFilenameWorker(phrase string, files []*zip.File, border chan SearchBorder, results chan string, wg *sync.WaitGroup) {
+func searchFilenameWorker(phrase string, r *zip.ReadCloser, border chan SearchBorder, results chan string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for b := range border {
-		for _, fn := range files[b.Start:b.Stop] {
-			if strings.Contains(fn.Name, phrase) {
-				results <- fn.Name
+		for i := range r.File[b.Start:b.Stop] {
+			if strings.Contains(r.File[i].Name, phrase) {
+				results <- r.File[i].Name
 			}
 		}
 	}
@@ -38,11 +38,13 @@ func SearchP4kFilenames(gameDir, phrase string) (*[]string, error) {
 	results := make(chan string)
 	borders := make(chan SearchBorder)
 
+	// TODO: Check if threads aren't creating copies of `r.File`
+	//  [DONE - CHECK IF THIS WORKED]
 	var wg sync.WaitGroup
 	div := runtime.NumCPU()
 	for i := 0; i < div; i++ {
 		wg.Add(1)
-		go searchFilenameWorker(phrase, r.File, borders, results, &wg)
+		go searchFilenameWorker(phrase, r, borders, results, &wg)
 	}
 
 	fileCount := len(r.File)
@@ -101,6 +103,8 @@ func WriteStringsToFile(filename string, strings *[]string) {
 	defer file.Close()
 
 	for _, s := range *strings {
-		file.WriteString(s + "\n")
+		if _, err = file.WriteString(s + "\n"); err != nil {
+			continue
+		}
 	}
 }

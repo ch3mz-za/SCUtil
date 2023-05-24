@@ -2,8 +2,7 @@ package frontend
 
 import (
 	"errors"
-	"io/ioutil"
-	"log"
+	"io"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -26,10 +25,6 @@ var (
 
 func doneDiaglog(win fyne.Window) {
 	dialog.ShowInformation("Status", "Completed successfully", win)
-}
-
-func resetToDefaultWindowSize(win fyne.Window) {
-	win.Resize(DefaultAppWinSize)
 }
 
 func resetToUserWindowSize(win fyne.Window) {
@@ -71,7 +66,10 @@ func showOpenFileDialog(dirPath string, win fyne.Window, openOpt int) func() {
 
 			switch openOpt {
 			case openExternally:
-				open.Run(reader.URI().Path())
+				if err := open.Run(reader.URI().Path()); err != nil {
+					dialog.ShowError(err, win)
+					return
+				}
 			case openImage:
 				showImage(reader)
 			default:
@@ -92,21 +90,8 @@ func showOpenFileDialog(dirPath string, win fyne.Window, openOpt int) func() {
 	}
 }
 
-func fileSaved(f fyne.URIWriteCloser, w fyne.Window) {
-	defer f.Close()
-	_, err := f.Write([]byte("Written by Fyne demo\n"))
-	if err != nil {
-		dialog.ShowError(err, w)
-	}
-	err = f.Close()
-	if err != nil {
-		dialog.ShowError(err, w)
-	}
-	log.Println("Saved to...", f.URI())
-}
-
 func loadImage(f fyne.URIReadCloser) *canvas.Image {
-	data, err := ioutil.ReadAll(f)
+	data, err := io.ReadAll(f)
 	if err != nil {
 		fyne.LogError("Failed to load image data", err)
 		return nil

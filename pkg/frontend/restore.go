@@ -22,7 +22,9 @@ func restore(win fyne.Window) fyne.CanvasObject {
 		if err != nil {
 			dialog.ShowError(err, win)
 		}
-		restoreData.Set(*items)
+		if err := restoreData.Set(*items); err != nil {
+			dialog.ShowError(err, win)
+		}
 	})
 
 	top := container.New(

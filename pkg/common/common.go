@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -40,8 +39,8 @@ func FindDir(root, target string) (string, error) {
 	return gamePath, err
 }
 
-func ListAllFilesAndDirs(dir string) ([]fs.FileInfo, error) {
-	files, err := ioutil.ReadDir(dir)
+func ListAllFilesAndDirs(dir string) ([]fs.DirEntry, error) {
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}

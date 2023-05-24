@@ -103,7 +103,9 @@ func BackupDirectory(sourceDir, destDir string) error {
 		outpath := filepath.Join(destDir, strings.TrimPrefix(path, sourceDir))
 
 		if info.IsDir() {
-			os.MkdirAll(outpath, info.Mode())
+			if err = os.MkdirAll(outpath, info.Mode()); err != nil {
+				return err
+			}
 			return nil // means recursive
 		}
 
@@ -137,7 +139,9 @@ func BackupDirectory(sourceDir, destDir string) error {
 		defer fh.Close()
 
 		// make it the same
-		fh.Chmod(info.Mode())
+		if err = fh.Chmod(info.Mode()); err != nil {
+			return err
+		}
 
 		// copy content
 		_, err = io.Copy(fh, in)

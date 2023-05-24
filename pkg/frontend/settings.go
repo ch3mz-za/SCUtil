@@ -43,14 +43,19 @@ func settings(win fyne.Window, cfg *config.AppConfig) fyne.CanvasObject {
 				return
 			}
 
-			gameDirData.Set(gameDir)
+			if err := gameDirData.Set(gameDir); err != nil {
+				dialog.ShowError(err, win)
+			}
+
 			if !scu.IsGameDirectory(gameDir) {
 				dialog.ShowError(errors.New("not a valid game directory"), win)
 				return
 			}
 
 			cfg.GameDir = gameDir
-			config.WriteAppConfig(config.AppConfigPath, cfg)
+			if err := config.WriteAppConfig(config.AppConfigPath, cfg); err != nil {
+				dialog.ShowError(errors.New("unable to write app config"), win)
+			}
 		}, win)
 	})
 	btnSetGameDir.SetIcon(theme.FolderIcon())
