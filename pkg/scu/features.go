@@ -32,6 +32,19 @@ var (
 	AppDir  string = ""
 )
 
+func GetGameVersions() []string {
+	dirs, err := os.ReadDir(GameDir)
+	if err != nil {
+		return []string{}
+	}
+
+	versions := make([]string, 0, len(dirs))
+	for _, d := range dirs {
+		versions = append(versions, d.Name())
+	}
+	return versions
+}
+
 // ClearAllDataExceptP4k - Clears all the data around the Data.p4k file
 func ClearAllDataExceptP4k(version string) error {
 	gameDir := filepath.Join(GameDir, version)
@@ -94,15 +107,16 @@ func GetP4kFilenames(version string) error {
 // SearchP4kFilenames - Search for specific filenames within the Data.p4k file
 func SearchP4kFilenames(version, phrase string) error {
 	gameDir := filepath.Join(GameDir, version)
-	results, err := p4k.SearchP4kFilenames(gameDir, phrase)
-	if err != nil {
-		return fmt.Errorf("unable to search files: %s", err.Error())
-	}
-
 	filename := strings.ReplaceAll(phrase, "\\", "_") + ".txt"
 	resultsDir := filepath.Join(AppDir, P4kSearchResultsDir, version)
 	common.MakeDir(resultsDir)
-	p4k.WriteStringsToFile(filepath.Join(resultsDir, filename), results)
+	resultsDir = filepath.Join(resultsDir, filename)
+
+	err := p4k.SearchP4kFilenames(gameDir, phrase, resultsDir)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

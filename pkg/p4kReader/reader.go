@@ -28,7 +28,9 @@ func GetP4kFilenames(gameDir, outputDir string) error {
 	defer p4kFileNameFile.Close()
 
 	for _, f := range r.File {
-		p4kFileNameFile.WriteString(f.Name + "\n")
+		if _, err = p4kFileNameFile.WriteString(f.Name + "\n"); err != nil {
+			return err
+		}
 	}
 	return nil
 }

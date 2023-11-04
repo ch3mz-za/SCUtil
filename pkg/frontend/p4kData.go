@@ -36,7 +36,10 @@ func p4kData(win fyne.Window) fyne.CanvasObject {
 	// open p4k filenames button
 	var p4kFilenamesResult string
 	btnOpenP4kFilenames := widget.NewButtonWithIcon("", theme.FileTextIcon(), func() {
-		open.Run(p4kFilenamesResult)
+		if err := open.Run(p4kFilenamesResult); err != nil {
+			dialog.ShowError(err, win)
+			return
+		}
 	})
 	btnOpenP4kFilenames.Disable()
 
@@ -68,7 +71,11 @@ func p4kData(win fyne.Window) fyne.CanvasObject {
 			return
 		}
 
-		searchData.Set(*getSearchResults(searchResultsDir, win))
+		if err := searchData.Set(*getSearchResults(searchResultsDir, win)); err != nil {
+			dialog.ShowError(err, win)
+			return
+		}
+
 		if searchData.Length() == 0 {
 			btnDelete.Disable()
 			btnOpenSearchResult.Disable()
@@ -93,7 +100,7 @@ func p4kData(win fyne.Window) fyne.CanvasObject {
 		btnOpenSearchResult.Enable()
 	}
 
-	selectionGameVersion := widget.NewSelect([]string{scu.GameVerLIVE, scu.GameVerPTU}, func(value string) {
+	selectionGameVersion := widget.NewSelect(scu.GetGameVersions(), func(value string) {
 		// set P4k filename open button state
 		btnOpenP4kFilenames.Disable()
 		p4kFilenamesResult = filepath.Join(scu.AppDir, fmt.Sprintf(scu.P4kFilenameResultsDir, value))
@@ -108,7 +115,9 @@ func p4kData(win fyne.Window) fyne.CanvasObject {
 		}
 
 		// set search results and button states
-		searchData.Set(*getSearchResults(searchResultsDir, win))
+		if err := searchData.Set(*getSearchResults(searchResultsDir, win)); err != nil {
+			dialog.ShowError(err, win)
+		}
 		btnDelete.Disable()
 		btnOpenSearchResult.Disable()
 
@@ -125,7 +134,7 @@ func p4kData(win fyne.Window) fyne.CanvasObject {
 	entrySearch := widget.NewEntry()
 	entrySearch.SetPlaceHolder("Enter phrase here")
 	btnSearch := widget.NewButton("Search P4k", func() {
-		if selectionGameVersion.Selected != scu.GameVerLIVE && selectionGameVersion.Selected != scu.GameVerPTU {
+		if selectionGameVersion.Selected == "" {
 			dialog.ShowError(errors.New("no game version selected"), win)
 			return
 		}
@@ -143,7 +152,11 @@ func p4kData(win fyne.Window) fyne.CanvasObject {
 		if err != nil {
 			dialog.ShowError(err, win)
 		}
-		searchData.Set(*items)
+
+		if err := searchData.Set(*items); err != nil {
+			dialog.ShowError(err, win)
+		}
+
 		entrySearch.SetText("")
 		runtime.GC()
 	})
