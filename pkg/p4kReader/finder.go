@@ -21,7 +21,7 @@ type SearchBorder struct {
 func searchFilenameWorker(phrase string, r *zip.ReadCloser, border chan SearchBorder, results chan string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for b := range border {
-		for i := range r.File[b.Start:b.Stop] {
+		for i := b.Start; i < b.Stop; i++ {
 			if strings.Contains(r.File[i].Name, phrase) {
 				results <- r.File[i].Name
 			}
@@ -29,17 +29,21 @@ func searchFilenameWorker(phrase string, r *zip.ReadCloser, border chan SearchBo
 	}
 }
 
-func SearchP4kFilenames(gameDir, phrase string) (*[]string, error) {
+func SearchP4kFilenames(gameDir, phrase, resultsFile string) error {
+
 	r, err := zip.OpenReader(filepath.Join(gameDir, dataP4k))
 	if err != nil {
-		return nil, fmt.Errorf("unable to open p4k data file: %s", err.Error())
+		return fmt.Errorf("unable to open p4k data file: %s", err.Error())
 	}
+	defer r.Close()
 
 	results := make(chan string)
 	borders := make(chan SearchBorder)
+	resultsDone := make(chan bool, 1)
+	defer close(resultsDone)
 
-	// TODO: Check if threads aren't creating copies of `r.File`
-	//  [DONE - CHECK IF THIS WORKED]
+	go WriteStringsToFile(resultsFile, results, resultsDone)
+
 	var wg sync.WaitGroup
 	div := runtime.NumCPU()
 	for i := 0; i < div; i++ {
@@ -67,12 +71,9 @@ func SearchP4kFilenames(gameDir, phrase string) (*[]string, error) {
 		close(results)
 	}()
 
-	searchResults := make([]string, 0, 1000)
-	for res := range results {
-		searchResults = append(searchResults, res)
-	}
+	<-resultsDone
 
-	return &searchResults, nil
+	return nil
 }
 
 func findInFile(phrase, filePath string, resultsChan chan string) {
@@ -95,16 +96,18 @@ func findInFile(phrase, filePath string, resultsChan chan string) {
 	}
 }
 
-func WriteStringsToFile(filename string, strings *[]string) {
+func WriteStringsToFile(filename string, results chan string, done chan bool) {
 	file, err := os.Create(filename)
 	if err != nil {
 		return
 	}
 	defer file.Close()
 
-	for _, s := range *strings {
-		if _, err = file.WriteString(s + "\n"); err != nil {
+	for r := range results {
+		if _, err = file.WriteString(r + "\n"); err != nil {
 			continue
 		}
 	}
+
+	done <- true
 }

@@ -23,7 +23,7 @@ func backup(win fyne.Window) fyne.CanvasObject {
 		{label: "Backup USER directory", dir: scu.UserBackupDir, fn: scu.BackupUserDirectory, openOption: openExternally},
 	}
 
-	selectionGameVersion := widget.NewSelect([]string{scu.GameVerLIVE, scu.GameVerPTU}, func(value string) {})
+	selectionGameVersion := widget.NewSelect(scu.GetGameVersions(), func(value string) {})
 	selectionGameVersion.Selected = scu.GameVerLIVE
 
 	selectedBackupItem := 0

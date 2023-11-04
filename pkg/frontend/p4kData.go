@@ -100,7 +100,7 @@ func p4kData(win fyne.Window) fyne.CanvasObject {
 		btnOpenSearchResult.Enable()
 	}
 
-	selectionGameVersion := widget.NewSelect([]string{scu.GameVerLIVE, scu.GameVerPTU}, func(value string) {
+	selectionGameVersion := widget.NewSelect(scu.GetGameVersions(), func(value string) {
 		// set P4k filename open button state
 		btnOpenP4kFilenames.Disable()
 		p4kFilenamesResult = filepath.Join(scu.AppDir, fmt.Sprintf(scu.P4kFilenameResultsDir, value))
@@ -134,7 +134,7 @@ func p4kData(win fyne.Window) fyne.CanvasObject {
 	entrySearch := widget.NewEntry()
 	entrySearch.SetPlaceHolder("Enter phrase here")
 	btnSearch := widget.NewButton("Search P4k", func() {
-		if selectionGameVersion.Selected != scu.GameVerLIVE && selectionGameVersion.Selected != scu.GameVerPTU {
+		if selectionGameVersion.Selected == "" {
 			dialog.ShowError(errors.New("no game version selected"), win)
 			return
 		}

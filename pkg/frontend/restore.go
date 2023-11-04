@@ -17,7 +17,7 @@ import (
 func restore(win fyne.Window) fyne.CanvasObject {
 	restoreData := binding.BindStringList(&[]string{})
 
-	selectionGameVersion := widget.NewSelect([]string{scu.GameVerLIVE, scu.GameVerPTU}, func(value string) {
+	selectionGameVersion := widget.NewSelect(scu.GetGameVersions(), func(value string) {
 		items, err := scu.GetFilesListFromDir(filepath.Join(scu.AppDir, scu.ControlMappingsBackupDir, value))
 		if err != nil {
 			dialog.ShowError(err, win)

@@ -15,7 +15,6 @@
 # vendor/
 .vscode/
 bin/
-p4k_filenames/
-p4k_search_results/
+P4kResults/
 test/
 config.toml

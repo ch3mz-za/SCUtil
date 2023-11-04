@@ -3,22 +3,15 @@ package main
 
 import (
 	"fmt"
-	// _ "net/http/pprof"
 
 	"fyne.io/fyne/v2/app"
 
 	fend "github.com/ch3mz-za/SCUtil/pkg/frontend"
 )
 
-const version string = "v2.3.1"
+const version string = "v2.4.0"
 
 func main() {
-
-	// defer profile.Start(profile.MemProfile).Stop()
-
-	// go func() {
-	// 	http.ListenAndServe(":8080", nil)
-	// }()
 
 	a := app.NewWithID("SCUtil")
 
