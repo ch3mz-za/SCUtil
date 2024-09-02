@@ -20,6 +20,7 @@ func backup(win fyne.Window) fyne.CanvasObject {
 	}{
 		{label: "Backup Control Mappings", dir: scu.ControlMappingsBackupDir, fn: scu.BackupControlMappings, openOption: openExternally},
 		{label: "Backup Screenshots", dir: scu.ScreenshotsBackupDir, fn: scu.BackupScreenshots, openOption: openImage},
+		{label: "Backup Characters", dir: scu.CharactersBackupDir, fn: scu.BackupUserCharacters, openOption: openExternally},
 		{label: "Backup USER directory", dir: scu.UserBackupDir, fn: scu.BackupUserDirectory, openOption: openExternally},
 	}
 
