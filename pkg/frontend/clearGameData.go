@@ -60,10 +60,8 @@ func clearGameData(win fyne.Window) fyne.CanvasObject {
 		var err error
 		switch clearFeatures[selectedBackupItem] {
 		case clearStarCitizenAppData:
-			var removedFiles *[]string
-			removedFiles, err = scu.ClearStarCitizenAppData()
-			if len(*removedFiles) != 0 {
-				dialog.ShowInformation("Files deleted", strings.Join(*removedFiles, "\n"), win)
+			if err = scu.ClearStarCitizenAppData(); err == nil {
+				dialog.ShowInformation("Files deleted", "Success!", win)
 			}
 
 		case clearRsiLauncherAppData:

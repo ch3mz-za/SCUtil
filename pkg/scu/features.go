@@ -23,6 +23,8 @@ const (
 	ControlMappingsBackupDir string = "BACKUPS/ControlMappings"
 	ScreenshotsDir           string = "ScreenShots"
 	ScreenshotsBackupDir     string = "BACKUPS/Screenshots"
+	CharactersDir            string = UserDir + "/Client/0/CustomCharacters"
+	CharactersBackupDir      string = "BACKUPS/CustomCharacters"
 	P4kSearchResultsDir      string = "P4kResults/Searches"
 	P4kFilenameResultsDir    string = "P4kResults/AllFileNames/%s/AllP4kFilenames.txt"
 )
@@ -51,16 +53,16 @@ func ClearAllDataExceptP4k(version string) error {
 
 	files, err := common.ListAllFilesAndDirs(gameDir)
 	if err != nil {
-		return errors.New("unable to list directories and files")
+		return fmt.Errorf("unable to list directories and files in %s: %w", gameDir, err)
 	}
 
 	for _, f := range files {
 		if strings.HasSuffix(f.Name(), ".p4k") {
 			continue
 		}
-		fPAth := filepath.Join(gameDir, f.Name())
+		filePath := filepath.Join(gameDir, f.Name())
 
-		err := os.RemoveAll(fPAth)
+		err := os.RemoveAll(filePath)
 		if err != nil {
 			continue
 		}
@@ -121,24 +123,47 @@ func SearchP4kFilenames(version, phrase string) error {
 }
 
 // ClearStarCitizenAppData - Clears the game's date within AppData
-func ClearStarCitizenAppData() (*[]string, error) {
+func ClearStarCitizenAppData() error {
 	scAppDataDir := filepath.Join(common.UserHomeDir(), "AppData", "Local", "Star Citizen")
 	files, _ := common.ListAllFilesAndDirs(scAppDataDir)
-	filesRemoved := make([]string, 0, len(files))
 
 	if len(files) == 0 {
-		return &filesRemoved, errors.New("Star Citizen AppData is empty")
+		return errors.New("Star Citizen AppData is empty")
 	} else {
 		for _, f := range files {
-			filename := filepath.Join(scAppDataDir, f.Name())
-			err := os.RemoveAll(filename)
-			if err != nil {
-				continue
+			if err := deleteAllFilesWithExclusions(filepath.Join(scAppDataDir, f.Name()), "GraphicsSettings.json"); err != nil {
+				return err
 			}
-			filesRemoved = append(filesRemoved, f.Name())
 		}
 	}
-	return &filesRemoved, nil
+	return nil
+}
+
+func deleteAllFilesWithExclusions(dir string, exclusions ...string) error {
+	err := filepath.Walk(dir,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if !info.IsDir() {
+				for _, ex := range exclusions {
+					if strings.HasSuffix(path, ex) {
+						return nil
+					}
+				}
+
+				if err := os.Remove(path); err != nil {
+					return nil
+				}
+			}
+
+			return nil
+		})
+	if err != nil {
+		return fmt.Errorf("error removing directory '%s':\n %s", dir, err.Error())
+	}
+	return nil
 }
 
 // ClearRsiLauncherAppData - Clears the game's launcher data within AppData
@@ -161,10 +186,7 @@ func ClearRsiLauncherAppData() *[]string {
 func BackupControlMappings(version string) error {
 	mappingsDir := filepath.Join(GameDir, version, ControlMappingsDir)
 	backupDir := filepath.Join(AppDir, ControlMappingsBackupDir, version)
-	if err := backupFiles(mappingsDir, backupDir, true, ctrlMapFileExt); err != nil {
-		return err
-	}
-	return nil
+	return backupFiles(mappingsDir, backupDir, true, ctrlMapFileExt)
 }
 
 // GetFilesListFromDir - Retrieve a list of all the files listed at a directory
@@ -205,4 +227,11 @@ func BackupUserDirectory(version string) error {
 	userDir := filepath.Join(GameDir, version, UserDir)
 	backupDir := filepath.Join(AppDir, UserBackupDir, version, UserDir)
 	return BackupDirectory(userDir, backupDir)
+}
+
+// BackupUserCharacters - Backup the custom characters in the USER directory
+func BackupUserCharacters(version string) error {
+	charDir := filepath.Join(GameDir, version, CharactersDir)
+	backupDir := filepath.Join(AppDir, CharactersBackupDir, version)
+	return backupFiles(charDir, backupDir, false, ".chf")
 }
