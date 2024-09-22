@@ -4,5 +4,5 @@ Website = "https://ch3mz.tech"
   Icon = "resources/galaxy.ico"
   Name = "SCUtil"
   ID = "com.scutil.app"
-  Version = "2.4.0"
-  Build = 0
+  Version = "2.5.0"
+  Build = 3
