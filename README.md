@@ -57,12 +57,12 @@ Utility that does some useful things with your Star Citizen directory
 
 ### 2.1. Executable
 
-Simply download the release and place `SCUtil.exe` within any folder of your choosing. Set your game directory in setting. A `config.toml` file should appear within the root directory of the `SCUtil.exe`. Below is a breakdown of the app's directory.
+Simply download the release and place `SCUtil.exe` within any folder of your choosing. Set your game directory in setting. A `config.yaml` file should appear within the root directory of the `SCUtil.exe`. Below is a breakdown of the app's directory.
 
 ```txt
 SomeDirectory
 │   SCUtil.exe
-│   config.toml
+│   config.yaml
 └───BACKUPS
     └───Screenshots
     │   └───LIVE
