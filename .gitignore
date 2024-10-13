@@ -17,4 +17,4 @@
 bin/
 P4kResults/
 test/
-config.toml
+config.yaml

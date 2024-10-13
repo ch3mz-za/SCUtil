@@ -9,7 +9,7 @@ import (
 	fend "github.com/ch3mz-za/SCUtil/pkg/frontend"
 )
 
-const version string = "v2.5.0"
+const version string = "v2.6.0"
 
 func main() {
 
