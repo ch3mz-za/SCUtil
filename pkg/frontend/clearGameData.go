@@ -31,8 +31,11 @@ func clearGameData(win fyne.Window) fyne.CanvasObject {
 	dropDownGameVersion.Selected = scu.GameVerLIVE
 	dropDownGameVersion.Hidden = true
 
-	checkRemoveControlMappings := widget.NewCheck("Remove Control Mappings", func(value bool) {})
+	checkRemoveControlMappings := widget.NewCheck("Remove control mappings", func(value bool) {})
 	checkRemoveControlMappings.Hidden = true
+
+	checkRemoveRenderSetting := widget.NewCheck("Exclude renderer setting", func(value bool) {})
+	checkRemoveRenderSetting.Hidden = false
 
 	selectedBackupItem := 0
 	listClearItems := widget.NewList(
@@ -52,15 +55,15 @@ func clearGameData(win fyne.Window) fyne.CanvasObject {
 	listClearItems.OnSelected = func(id int) {
 		selectedBackupItem = id
 		checkRemoveControlMappings.Hidden = clearFeatures[id] != clearUserData
+		checkRemoveRenderSetting.Hidden = clearFeatures[id] != clearStarCitizenAppData
 		dropDownGameVersion.Hidden = clearFeatures[id] != clearAlldataExceptP4k && clearFeatures[id] != clearUserData
-
 	}
 
 	btnClear := widget.NewButton("Clear", func() {
 		var err error
 		switch clearFeatures[selectedBackupItem] {
 		case clearStarCitizenAppData:
-			if err = scu.ClearStarCitizenAppData(); err == nil {
+			if err = scu.ClearStarCitizenAppData(checkRemoveRenderSetting.Checked); err == nil {
 				dialog.ShowInformation("Files deleted", "Success!", win)
 			}
 
@@ -94,7 +97,7 @@ func clearGameData(win fyne.Window) fyne.CanvasObject {
 		nil, bottom, nil, nil,
 		container.NewGridWithRows(2,
 			listClearItems,
-			container.NewVBox(dropDownGameVersion, checkRemoveControlMappings),
+			container.NewVBox(dropDownGameVersion, checkRemoveControlMappings, checkRemoveRenderSetting),
 		),
 	))
 }

@@ -123,15 +123,20 @@ func SearchP4kFilenames(version, phrase string) error {
 }
 
 // ClearStarCitizenAppData - Clears the game's date within AppData
-func ClearStarCitizenAppData() error {
+func ClearStarCitizenAppData(enableExclusions bool) error {
 	scAppDataDir := filepath.Join(common.UserHomeDir(), "AppData", "Local", "Star Citizen")
 	files, _ := common.ListAllFilesAndDirs(scAppDataDir)
+
+	var exclusion []string
+	if enableExclusions {
+		exclusion = append(exclusion, "GraphicsSettings.json")
+	}
 
 	if len(files) == 0 {
 		return errors.New("Star Citizen AppData is empty")
 	} else {
 		for _, f := range files {
-			if err := deleteAllFilesWithExclusions(filepath.Join(scAppDataDir, f.Name()), "GraphicsSettings.json"); err != nil {
+			if err := deleteAllFilesWithExclusions(filepath.Join(scAppDataDir, f.Name()), exclusion...); err != nil {
 				return err
 			}
 		}
