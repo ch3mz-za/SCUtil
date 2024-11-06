@@ -1,63 +1,84 @@
 # SCUtil
 
-Utility that does some useful things with your Star Citizen directory
+Utility that does some useful things with your Star Citizen game data.
+
+![Local image](docs/images/SCUtil.png)
 
 ## 1. Features
 
-### 1.1. Clear all data except p4k
+### 1.1 Backup data
 
-> Clears all data in the `Star Citizen` folder except the `Data.p4k` file. This is useful
-> to sometimes clear out odd issues that pop up.
+- **Backup control mapping**
 
-### 1.2. Clear `USER` folder (excluding control mappings)
+  > This does a backup of your game's custom control mappings and stores it within the `BACKUPS` folder.
+  > The backup location can be found in the root folder of SCUtil.
 
-> Clears the `USER` folder in the `Star Citizen` folder, excluding control mappings. This
-> is useful to clear issues relating to old user files.
+- **Backup screenshots**
 
-### 1.3. Clear `USER` folder (including control mappings)
+  > This gives the user the ability to backup their Star Citizen screenshots within the `BACKUPS` folder.
+  > The backup location can be found in the root folder of SCUtil.
 
-> Clears the `USER` folder in the `Star Citizen` folder, including control mappings. This
-> is useful to clear issues relating to old user files.
+- **Backup USER directory**
 
-### 1.4. Reads all the filenames in the p4k data file
+  > This will store a copy of the game's USER directory within the `BACKUPS` folder.
+  > The backup location can be found in the root folder of SCUtil.
 
-> This read all the filenames included wihtin the `Data.p4k` file and
-> writes it out to a file (`P4k_filenames.txt`). This is for the curious
-> individuals.
+- **Backup Star Citizen characters**
 
-### 1.5. Search p4k filenames
+  > This will store a copy of your Star Citizen character in the `BACKUP` folder.
+  > The backup location can be found in the root folder of SCUtil.
 
-> This features takes a phrase and searches for filenames within the
-> Data.p4k which contain the phrase.
+### 1.2 Clear data
 
-### 1.6. Clear Star Citizen App Data (Windows AppData)
+- **Clear all data except p4k**
 
-> This clears out error logs that are typically found within Star
-> Citizen's App Data which sometimes prevent the game from starting.
+  > Clears all data in the `Star Citizen` folder except the `Data.p4k` file. This is useful
+  > to sometimes clear out odd issues that pop up.
 
-### 1.7. Clear RSI Launcher data (Windows AppData)
+- **Clear `USER` folder**
 
-> This clears out logs and cached items that are typically found within > the RSI Launcher's App Data which sometimes prevent the game from
-> starting.
+  > Clears the `USER` folder in the `Star Citizen` folder. This allows for the exclusion of control mappings. This
+  > is useful to clear issues relating to old user files.
 
-### 1.8. Backup and restore control mapping
+- **Clear Star Citizen AppData (Windows AppData)**
 
-> This does a backup of your game's custom control mappings and stores it within the `BACKUPS` folder as well as give you the option to restore previously backed up control mappings.
-> The backup location can be found in the parent directory of your Star Citizen game files.
+  > This clears out error logs that are typically found within Star Citizen's App Data which sometimes prevent
+  > the game from starting. There is also the option to exlude the renderer settings so that the game does not default 
+  > back to DirectX.
 
-### 1.9. Backup screenshots
+- **Clear RSI Launcher AppData (Windows AppData)**
 
-> This gives the user the ability to backup their Star Citizen screenshots within the `BACKUPS` folder.
+  > This clears out logs and cached items that are typically found within > the RSI Launcher's App Data which sometimes prevent the game from
+  > starting.
 
-### 1.10. Backup USER directory
+### 1.3 Restore data
 
-> This will store a copy of the game's USER directory within the `BACKUPS` folder.
+- **Restore control mappings**
+  
+  > Ability to restore previously backed up control mappings.
+
+- **Restore characters (coming soon)**
+
+  > Ability to restore previously backed up characters.
+
+### 1.4 P4k data exploration
+
+- **Reads all the filenames in the p4k data file**
+
+  > This read all the filenames included wihtin the `Data.p4k` file and
+  > writes it out to a file (`P4k_filenames.txt`). This is for the curious
+  > individuals.
+
+- **Search p4k filenames**
+
+  > This features takes a phrase and searches for filenames within the
+  > Data.p4k which contain the phrase. Also for the curious.
 
 ## 2. Running SCUtil
 
 ### 2.1. Executable
 
-Simply download the release and place `SCUtil.exe` within any folder of your choosing. Set your game directory in setting. A `config.yaml` file should appear within the root directory of the `SCUtil.exe`. Below is a breakdown of the app's directory.
+Simply download the release and place `SCUtil.exe` within any folder of your choosing (not in ProgramFiles). Set your game directory in settings. Any parent folder/drive to your Star Citizen installation can be selected as it will look for your installation. A `config.yaml` file should appear within the root directory of the `SCUtil.exe`. Below is a breakdown of the app's directory.
 
 ```txt
 SomeDirectory
