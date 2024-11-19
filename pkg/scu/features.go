@@ -50,53 +50,17 @@ func GetGameVersions() []string {
 // ClearAllDataExceptP4k - Clears all the data around the Data.p4k file
 func ClearAllDataExceptP4k(version string) error {
 	gameDir := filepath.Join(GameDir, version)
-
-	files, err := common.ListAllFilesAndDirs(gameDir)
-	if err != nil {
-		return fmt.Errorf("unable to list directories and files in %s: %w", gameDir, err)
-	}
-
-	for _, f := range files {
-		if strings.HasSuffix(f.Name(), ".p4k") {
-			continue
-		}
-		filePath := filepath.Join(gameDir, f.Name())
-
-		err := os.RemoveAll(filePath)
-		if err != nil {
-			continue
-		}
-	}
-	return nil
+	return deleteAllFilesWithExclusions(gameDir, "Data.p4k")
 }
 
 // ClearUserFolder - Clears all the data in the USER folder with the option to exclude control mappings
 func ClearUserFolder(version string, exclusionsEnabled bool) error {
 	userDir := filepath.Join(GameDir, version, "USER")
-	exclusion := filepath.Join(userDir, "Client", "0", "Controls")
-
-	err := filepath.Walk(userDir,
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-
-			if !info.IsDir() {
-
-				if exclusionsEnabled && strings.HasPrefix(path, exclusion) {
-					return nil
-				}
-
-				if err := os.Remove(path); err != nil {
-					return nil
-				}
-			}
-			return nil
-		})
-	if err != nil {
-		return fmt.Errorf("error removing USER directory:\n %s", err.Error())
+	fmt.Printf("userDir: %s\n", userDir)
+	if exclusionsEnabled {
+		return deleteAllFilesWithExclusions(userDir, "Controls")
 	}
-	return nil
+	return deleteAllFilesWithExclusions(userDir)
 }
 
 // GetP4kFilenames - Gets all the filenames from the Data.p4k file and writes them to a specific folder
@@ -124,43 +88,78 @@ func SearchP4kFilenames(version, phrase string) error {
 
 // ClearStarCitizenAppData - Clears the game's date within AppData
 func ClearStarCitizenAppData(enableExclusions bool) error {
-	scAppDataDir := filepath.Join(common.UserHomeDir(), "AppData", "Local", "Star Citizen")
-	files, _ := common.ListAllFilesAndDirs(scAppDataDir)
-
-	var exclusion []string
-	if enableExclusions {
-		exclusion = append(exclusion, "GraphicsSettings.json")
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
 	}
 
-	if len(files) == 0 {
-		return errors.New("Star Citizen AppData is empty")
-	} else {
-		for _, f := range files {
-			if err := deleteAllFilesWithExclusions(filepath.Join(scAppDataDir, f.Name()), exclusion...); err != nil {
-				return err
-			}
+	scAppDataDir := filepath.Join(homeDir, "AppData", "Local", "Star Citizen")
+
+	if enableExclusions {
+		if err := deleteAllFilesWithExclusions(scAppDataDir, "GraphicsSettings.json"); err != nil {
+			return err
 		}
+	} else {
+		if err := deleteAllFilesWithExclusions(scAppDataDir); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ClearP4kData - Removes the '.p4k' file from the Star Citzen directory
+func ClearP4kData(version string) error {
+	p4kPath := filepath.Join(GameDir, version, "Data.p4k")
+	if err := os.Remove(p4kPath); err != nil {
+		return fmt.Errorf("error removing p4k data: %s", err.Error())
 	}
 	return nil
 }
 
+// deleteAllFilesWithExclusions - deletes all files and folder except the exclusions
 func deleteAllFilesWithExclusions(dir string, exclusions ...string) error {
+	exclusionPaths := make([]string, 0, len(exclusions))
+
+	// find the paths of files to exclude
 	err := filepath.Walk(dir,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
 
-			if !info.IsDir() {
-				for _, ex := range exclusions {
-					if strings.HasSuffix(path, ex) {
-						return nil
-					}
-				}
-
-				if err := os.Remove(path); err != nil {
+			for _, ex := range exclusions {
+				if strings.HasSuffix(path, ex) {
+					fmt.Printf("found: %s\n", path)
+					exclusionPaths = append(exclusionPaths, path)
 					return nil
 				}
+			}
+
+			return nil
+		})
+	if err != nil {
+		return fmt.Errorf("error finding exclusions in '%s': %s", dir, err.Error())
+	}
+
+	// remove all files except the exclusions
+	err = filepath.Walk(dir,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return nil
+			}
+
+			for _, ex := range exclusionPaths {
+				if strings.HasPrefix(ex, path) || strings.HasPrefix(path, ex) {
+					fmt.Printf("skipping: %s\n", path)
+					return nil
+				}
+			}
+
+			fmt.Printf("removing: %s\n", path)
+			if err := os.RemoveAll(path); err != nil {
+				fmt.Printf("error removing: %s\n", err.Error())
+				return err
 			}
 
 			return nil
@@ -173,9 +172,14 @@ func deleteAllFilesWithExclusions(dir string, exclusions ...string) error {
 
 // ClearRsiLauncherAppData - Clears the game's launcher data within AppData
 func ClearRsiLauncherAppData() *[]string {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+
 	var filesRemoved []string
 	for _, folder := range []string{"rsilauncher", "RSI Launcher"} {
-		rsiLauncherDir := filepath.Join(common.UserHomeDir(), "AppData", "Roaming", folder)
+		rsiLauncherDir := filepath.Join(homeDir, "AppData", "Roaming", folder)
 		files, _ := common.ListAllFilesAndDirs(rsiLauncherDir)
 		for _, f := range files {
 			if err := os.RemoveAll(filepath.Join(rsiLauncherDir, f.Name())); err != nil {

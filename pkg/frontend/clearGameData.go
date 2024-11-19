@@ -14,8 +14,7 @@ import (
 func clearGameData(win fyne.Window) fyne.CanvasObject {
 
 	const (
-		clearAlldataExceptP4k   string = "Clear all data except p4k"
-		clearUserData           string = "Clear USER data"
+		clearStarCitizenData    string = "Clear Star Citizen Data"
 		clearStarCitizenAppData string = "Clear Star Citizen AppData"
 		clearRsiLauncherAppData string = "Clear RSI Launcher AppData"
 	)
@@ -23,8 +22,7 @@ func clearGameData(win fyne.Window) fyne.CanvasObject {
 	clearFeatures := []string{
 		clearStarCitizenAppData,
 		clearRsiLauncherAppData,
-		clearUserData,
-		clearAlldataExceptP4k,
+		clearStarCitizenData,
 	}
 
 	dropDownGameVersion := widget.NewSelect(scu.GetGameVersions(), func(value string) {})
@@ -51,12 +49,33 @@ func clearGameData(win fyne.Window) fyne.CanvasObject {
 			o.(*widget.Label).SetText(clearFeatures[i])
 		})
 
+	const (
+		clearOptUserData  = "User data"
+		clearOptP4kData   = "P4k data"
+		clearOptAllButP4k = "All except p4k data"
+	)
+
+	clearSUDataOptions := []string{
+		clearOptUserData,
+		clearOptP4kData,
+		clearOptAllButP4k,
+	}
+	radioClearData := widget.NewRadioGroup(
+		clearSUDataOptions,
+		func(s string) {
+			checkRemoveControlMappings.Hidden = s != clearOptUserData
+		},
+	)
+	radioClearData.Hidden = true
+	radioClearData.Selected = clearSUDataOptions[0]
+
 	listClearItems.Select(selectedBackupItem)
 	listClearItems.OnSelected = func(id int) {
 		selectedBackupItem = id
-		checkRemoveControlMappings.Hidden = clearFeatures[id] != clearUserData
+		checkRemoveControlMappings.Hidden = clearFeatures[id] != clearStarCitizenData || radioClearData.Selected != clearOptUserData
 		checkRemoveRenderSetting.Hidden = clearFeatures[id] != clearStarCitizenAppData
-		dropDownGameVersion.Hidden = clearFeatures[id] != clearAlldataExceptP4k && clearFeatures[id] != clearUserData
+		dropDownGameVersion.Hidden = clearFeatures[id] != clearStarCitizenData
+		radioClearData.Hidden = clearFeatures[id] != clearStarCitizenData
 	}
 
 	btnClear := widget.NewButton("Clear", func() {
@@ -73,14 +92,23 @@ func clearGameData(win fyne.Window) fyne.CanvasObject {
 				dialog.ShowInformation("AppData deleted", strings.Join(*removedFiles, "\n"), win)
 			}
 
-		case clearAlldataExceptP4k:
-			if err = scu.ClearAllDataExceptP4k(dropDownGameVersion.Selected); err == nil {
-				dialog.ShowInformation("Clear All Data", "data cleared", win)
-			}
+		case clearStarCitizenData:
 
-		case clearUserData:
-			if err = scu.ClearUserFolder(dropDownGameVersion.Selected, checkRemoveControlMappings.Checked); err == nil {
-				dialog.ShowInformation("Clear USER Data", "data cleared", win)
+			switch radioClearData.Selected {
+			case clearOptUserData:
+				if err = scu.ClearUserFolder(dropDownGameVersion.Selected, checkRemoveControlMappings.Checked); err == nil {
+					dialog.ShowInformation("Clear USER Data", "data cleared", win)
+				}
+
+			case clearOptP4kData:
+				if err = scu.ClearP4kData(dropDownGameVersion.Selected); err == nil {
+					dialog.ShowInformation("Clear P4k Data", "data cleared", win)
+				}
+
+			case clearOptAllButP4k:
+				if err = scu.ClearAllDataExceptP4k(dropDownGameVersion.Selected); err == nil {
+					dialog.ShowInformation("Clear All Data", "data cleared", win)
+				}
 			}
 
 		default:
@@ -92,12 +120,10 @@ func clearGameData(win fyne.Window) fyne.CanvasObject {
 		}
 	})
 
-	bottom := container.NewVBox(btnClear)
-	return widget.NewCard("", "", container.NewBorder(
-		nil, bottom, nil, nil,
-		container.NewGridWithRows(2,
-			listClearItems,
-			container.NewVBox(dropDownGameVersion, checkRemoveControlMappings, checkRemoveRenderSetting),
-		),
+	topCard := widget.NewCard("", "", listClearItems)
+	bottomCard := widget.NewCard("", "", container.NewBorder(
+		nil, btnClear, nil, nil,
+		container.NewVBox(dropDownGameVersion, radioClearData, checkRemoveControlMappings, checkRemoveRenderSetting),
 	))
+	return container.NewVSplit(topCard, bottomCard)
 }

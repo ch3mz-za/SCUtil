@@ -7,7 +7,6 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/dialog"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/ch3mz-za/SCUtil/pkg/config"
@@ -60,13 +59,8 @@ func settings(win fyne.Window, cfg *config.AppConfig) fyne.CanvasObject {
 	})
 	btnSetGameDir.SetIcon(theme.FolderIcon())
 
-	cardGameDir := widget.NewCard("", "Game directory", container.NewVBox(
+	return widget.NewCard("", "Game directory", container.NewVBox(
 		container.NewBorder(nil, nil, nil, btnSetGameDir, gameDirLabel),
 		progressBar,
 	))
-
-	return container.New(
-		layout.NewVBoxLayout(),
-		cardGameDir,
-	)
 }

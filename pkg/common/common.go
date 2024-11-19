@@ -47,14 +47,6 @@ func ListAllFilesAndDirs(dir string) ([]fs.DirEntry, error) {
 	return files, nil
 }
 
-func UserHomeDir() string {
-	home := os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
-	if home == "" {
-		home = os.Getenv("USERPROFILE")
-	}
-	return home
-}
-
 func CopyFile(src string, dst string) error {
 	fin, err := os.Open(src)
 	if err != nil {

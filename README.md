@@ -30,15 +30,22 @@ Utility that does some useful things with your Star Citizen game data.
 
 ### 1.2 Clear data
 
-- **Clear all data except p4k**
+- **Clear Star Citizen data**
 
-  > Clears all data in the `Star Citizen` folder except the `Data.p4k` file. This is useful
-  > to sometimes clear out odd issues that pop up.
+  - **Clear p4k data**
 
-- **Clear `USER` folder**
+    > Clears the `Data.p4k` file. This is useful if some corruption may have occurred. Please note that this
+    > would require a 100GB+ download. 
 
-  > Clears the `USER` folder in the `Star Citizen` folder. This allows for the exclusion of control mappings. This
-  > is useful to clear issues relating to old user files.
+  - **Clear all data except p4k**
+
+    > Clears all data in the `Star Citizen` folder except the `Data.p4k` file. This is useful
+    > to sometimes clear out odd issues that pop up.
+
+  - **Clear `USER` folder**
+
+    > Clears the `USER` folder in the `Star Citizen` folder. This allows for the exclusion of control mappings. This
+    > is useful to clear issues relating to old user files.
 
 - **Clear Star Citizen AppData (Windows AppData)**
 
@@ -107,3 +114,7 @@ With the executable, follow the instructions in section `2.1`.
 > **NOTE** <br>
 > Since version 2.0.0 of SCUtil, compilation will require the use of [Fyne](https://github.com/fyne-io/fyne) and a GCC compiler.
 >
+
+## Attribution
+
+* [App icon](https://www.flaticon.com/free-icons/spaceship)
