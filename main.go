@@ -6,10 +6,10 @@ import (
 
 	"fyne.io/fyne/v2/app"
 
-	fend "github.com/ch3mz-za/SCUtil/pkg/frontend"
+	fend "github.com/ch3mz-za/SCUtil/internal/frontend"
 )
 
-const version string = "v2.6.0"
+const version string = "v2.7.0"
 
 func main() {
 
