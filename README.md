@@ -43,7 +43,7 @@ Utility that does some useful things with your Star Citizen game data.
 - **Clear Star Citizen AppData (Windows AppData)**
 
   > This clears out error logs that are typically found within Star Citizen's App Data which sometimes prevent
-  > the game from starting. There is also the option to exlude the renderer settings so that the game does not default 
+  > the game from starting. There is also the option to exlude the renderer settings so that the game does not default
   > back to DirectX.
 
 - **Clear RSI Launcher AppData (Windows AppData)**
@@ -54,7 +54,7 @@ Utility that does some useful things with your Star Citizen game data.
 ### 1.3 Restore data
 
 - **Restore control mappings**
-  
+
   > Ability to restore previously backed up control mappings.
 
 - **Restore characters (coming soon)**
@@ -73,6 +73,13 @@ Utility that does some useful things with your Star Citizen game data.
 
   > This features takes a phrase and searches for filenames within the
   > Data.p4k which contain the phrase. Also for the curious.
+
+### 1.5 Game log mintoring
+
+- **Tails active game log or read log backups**
+
+> This feature allows for the tailing of the active game log or reading through backed up game logs. Additionally
+> logs can be filtered based on events or based on a search field.
 
 ## 2. Running SCUtil
 
