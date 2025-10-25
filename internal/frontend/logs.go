@@ -20,11 +20,20 @@ import (
 	"github.com/ch3mz-za/SCUtil/internal/scu"
 )
 
+type ParseOption int
+
+const (
+	TailFile ParseOption = iota
+	SingleFile
+	AggregateFiles
+)
+
 func logs(win fyne.Window) fyne.CanvasObject {
+	const logItemLimit = 1000
 	// State
-	logItems := make([]*logmon.LogItem, 0, 500) // in-memory store
-	activeFilter := None                        // or Humans/Vehicles/Search
-	activeQuery := ""                           // search string
+	logItems := make([]*logmon.LogItem, 0, logItemLimit) // in-memory store
+	activeFilter := None                                 // or Humans/Vehicles/Search
+	activeQuery := ""                                    // search string
 
 	// --- Multi-line log view using VBox inside a VScroll (variable-height rows) ---
 	logBox := container.NewVBox()
@@ -64,11 +73,17 @@ func logs(win fyne.Window) fyne.CanvasObject {
 
 	btnStartParse := widget.NewButtonWithIcon("Start", theme.MediaPlayIcon(), nil)
 
-	runParser := func(cfg *logmon.Config, withButtonReset bool) context.CancelFunc {
+	runParser := func(cfg *logmon.Config, parseOption ParseOption) context.CancelFunc {
 		ctx, cancel := context.WithCancel(context.Background())
 
 		parser := logmon.GameParser(logmon.DefaultAD(), logmon.DefaultVD())
 		out, errs := logmon.Run(ctx, cfg, parser)
+
+		if parseOption == AggregateFiles {
+			// TODO:
+			// - Open file for writing
+			// - Show loading bar
+		}
 
 		// Process in background to avoid blocking UI
 		go func() {
@@ -79,22 +94,32 @@ func logs(win fyne.Window) fyne.CanvasObject {
 						out = nil
 						continue
 					}
-					// keep everything
-					logItems = append(logItems, s)
 
-					// (optional) cap memory
-					if len(logItems) > 500 {
-						logItems = logItems[len(logItems)-500:]
+					switch parseOption {
+					case SingleFile, TailFile:
+
+						// keep everything
+						logItems = append(logItems, s)
+
+						// (optional) cap memory
+						if len(logItems) > logItemLimit {
+							logItems = logItems[len(logItems)-logItemLimit:]
+						}
+
+						// append only if this item matches current predicate
+						if filterMatch(s, activeFilter, activeQuery) {
+							fyne.Do(func() {
+								logBox.Add(parseLogResult(s))
+								logBox.Refresh()
+								scroll.ScrollToBottom()
+							})
+						}
+
+					case AggregateFiles:
+						// Write line to file
+
 					}
 
-					// append only if this item matches current predicate
-					if filterMatch(s, activeFilter, activeQuery) {
-						fyne.Do(func() {
-							logBox.Add(parseLogResult(s))
-							logBox.Refresh()
-							scroll.ScrollToBottom()
-						})
-					}
 				case e, ok := <-errs:
 					if !ok {
 						errs = nil
@@ -107,14 +132,19 @@ func logs(win fyne.Window) fyne.CanvasObject {
 				}
 			}
 
+			// TODO: Check if this is still required for tailing
 			// auto-reset button when stream finishes
-			if withButtonReset {
+			if parseOption == TailFile {
 				fyne.Do(func() {
 					btnEnabled = false
 					btnStartParse.Icon = theme.MediaPlayIcon()
 					btnStartParse.Text = "Start"
 					btnStartParse.Refresh()
 				})
+			}
+
+			if parseOption == AggregateFiles {
+				// TODO: Maybe display file at this point
 			}
 		}()
 		return cancel
@@ -123,13 +153,39 @@ func logs(win fyne.Window) fyne.CanvasObject {
 	btnFilterHumans := widget.NewButton("Humans", nil)
 	btnFilterVehicles := widget.NewButton("Vehicles", nil)
 
+	checkBoxAggregate := widget.NewCheck("Aggregate", nil)
 	btnOpenLogs := widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
 
-		pathCh, errCh := fileOpenPath(
-			filepath.Join(scu.GameDir, selectionGameVersion.Selected, scu.GameLogBackupDir),
-			win,
-			storage.NewExtensionFileFilter([]string{".log"}),
+		var (
+			pathCh <-chan string
+			errCh  <-chan error
+			conf   *logmon.Config
 		)
+		aggragateLogs := checkBoxAggregate.Checked
+		if aggragateLogs {
+			pathCh, errCh = folderOpenPath(
+				filepath.Join(scu.GameDir, selectionGameVersion.Selected, scu.GameLogBackupDir),
+				win,
+			)
+
+			conf = &logmon.Config{
+				Mode:      logmon.ModeOnce,
+				FromStart: true,
+				ChanSize:  1000,
+			}
+		} else {
+			pathCh, errCh = fileOpenPath(
+				filepath.Join(scu.GameDir, selectionGameVersion.Selected, scu.GameLogBackupDir),
+				win,
+				storage.NewExtensionFileFilter([]string{".log"}),
+			)
+
+			conf = &logmon.Config{
+				Mode:      logmon.ModeOnce,
+				FromStart: true,
+				ChanSize:  256,
+			}
+		}
 
 		// Reset state for a fresh file
 		logItems = logItems[:0]
@@ -145,12 +201,15 @@ func logs(win fyne.Window) fyne.CanvasObject {
 		go func() {
 			select {
 			case p := <-pathCh:
-				_ = runParser(&logmon.Config{
-					ActivePath: p,
-					Mode:       logmon.ModeOnce,
-					FromStart:  true,
-					ChanSize:   256,
-				}, false)
+				fmt.Fprintf(os.Stdout, "--- PATH: %s ---\n", p)
+				if aggragateLogs {
+					conf.Archives = p
+					_ = runParser(conf, AggregateFiles)
+				} else {
+					conf.ActivePath = p
+					_ = runParser(conf, SingleFile)
+				}
+
 			case err := <-errCh:
 				if err != nil {
 					dialog.ShowError(err, win)
@@ -195,11 +254,10 @@ func logs(win fyne.Window) fyne.CanvasObject {
 			PollEvery:  5 * time.Second,
 			FromStart:  true,
 			ChanSize:   256,
-		}, true)
+		}, TailFile)
 	}
 
 	// top controlls
-
 	btnFilterAll.FocusGained()
 	btnFilterHumans.FocusLost()
 	btnFilterVehicles.FocusLost()
@@ -243,7 +301,7 @@ func logs(win fyne.Window) fyne.CanvasObject {
 	})
 
 	top := container.NewBorder(nil, nil, container.NewHBox(btnFilterAll, btnFilterHumans, btnFilterVehicles), btnSearch, searchField)
-	bottom := container.NewBorder(nil, nil, container.NewHBox(selectionGameVersion, btnStartParse), btnOpenLogs, logFileEntry)
+	bottom := container.NewBorder(nil, nil, container.NewHBox(selectionGameVersion, btnStartParse), container.NewHBox(btnOpenLogs, checkBoxAggregate), logFileEntry)
 
 	return widget.NewCard("", "", container.NewBorder(top, bottom, nil, nil, scroll))
 }

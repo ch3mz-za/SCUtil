@@ -93,6 +93,35 @@ func fileOpenPath(dirPath string, w fyne.Window, filter storage.FileFilter) (<-c
 	return pathCh, errCh
 }
 
+func folderOpenPath(dirPath string, w fyne.Window) (<-chan string, <-chan error) {
+	pathCh := make(chan string, 1)
+	errCh := make(chan error, 1)
+
+	d := dialog.NewFolderOpen(func(rc fyne.ListableURI, err error) {
+		if err != nil {
+			errCh <- err
+			return
+		}
+
+		if rc == nil {
+			errCh <- ErrFileOpenCancelled
+			return
+		}
+
+		pathCh <- rc.Path()
+	}, w)
+
+	uri, err := storage.ListerForURI(storage.NewFileURI(dirPath))
+	if err != nil {
+		dialog.ShowError(errors.New("No directory found."), w)
+		return nil, nil
+	}
+
+	d.SetLocation(uri)
+	d.Show()
+	return pathCh, errCh
+}
+
 func filePathFromURI(u fyne.URI) string {
 	// For local files prefer a native path; otherwise return the URI string
 	if u.Scheme() != "file" {

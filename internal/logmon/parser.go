@@ -2,6 +2,7 @@ package logmon
 
 import (
 	"strings"
+	"time"
 )
 
 type EventType string
@@ -16,7 +17,7 @@ type LogItem struct {
 	Attacker string
 	Driver   string
 	Location string
-	Time     string
+	Time     *time.Time
 	Type     EventType
 	Vehicle  string
 	Victim   string

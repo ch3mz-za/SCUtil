@@ -3,14 +3,16 @@ package logmon
 import (
 	"strings"
 	"time"
+
+	"github.com/ch3mz-za/SCUtil/internal/util"
 )
 
-func roundTimeToSeconds(t string) string {
+func roundTimeToSeconds(t string) *time.Time {
 	parsedTime, err := time.Parse(time.RFC3339, t)
 	if err != nil {
-		return "parse error"
+		return nil
 	}
-	return parsedTime.Round(time.Second).Format(time.RFC3339)
+	return util.Ptr(parsedTime.Round(time.Second))
 }
 
 func trimAngleBrackets(tok string) string {

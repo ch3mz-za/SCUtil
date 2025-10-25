@@ -79,13 +79,13 @@ func Run(ctx context.Context, cfg *Config, parser Parser) (<-chan *LogItem, <-ch
 		readOnce := func() error {
 			// archives (optional)
 			if strings.TrimSpace(cfg.Archives) != "" {
-				matches, err := filepath.Glob(cfg.Archives)
+				matches, err := filepath.Glob(cfg.Archives + "/*.log")
 				if err != nil {
 					return fmt.Errorf("archives glob: %w", err)
 				}
+				fmt.Fprintf(os.Stdout, "matches: %v\n", matches)
 				sort.Strings(matches) // oldest-ish → newest-ish
 				for _, p := range matches {
-					fmt.Fprintf(os.Stdout, "path: %s\n", p)
 					if err := readFileOnce(ctx, p, emit); err != nil {
 						return err
 					}
