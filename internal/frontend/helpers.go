@@ -80,15 +80,14 @@ func fileOpenPath(dirPath string, w fyne.Window, filter storage.FileFilter) (<-c
 	}, w)
 
 	uri, err := storage.ListerForURI(storage.NewFileURI(dirPath))
-	if err != nil {
-		dialog.ShowError(errors.New("No directory found."), w)
-		return nil, nil
+	if err == nil {
+		d.SetLocation(uri)
 	}
 
 	if filter != nil {
 		d.SetFilter(filter)
 	}
-	d.SetLocation(uri)
+
 	d.Show()
 	return pathCh, errCh
 }
@@ -112,9 +111,8 @@ func folderOpenPath(dirPath string, w fyne.Window) (<-chan string, <-chan error)
 	}, w)
 
 	uri, err := storage.ListerForURI(storage.NewFileURI(dirPath))
-	if err != nil {
-		dialog.ShowError(errors.New("No directory found."), w)
-		return nil, nil
+	if err == nil {
+		d.SetLocation(uri)
 	}
 
 	d.SetLocation(uri)
@@ -162,13 +160,10 @@ func showOpenFileDialog(dirPath string, win fyne.Window, openOpt int) func() {
 		}, win)
 
 		uri, err := storage.ListerForURI(storage.NewFileURI(dirPath))
-		if err != nil {
-			dialog.ShowError(errors.New("No directory found. Perform a backup first."), win)
-			resetToUserWindowSize(win)
-			return
+		if err == nil {
+			folderDiag.SetLocation(uri)
 		}
 
-		folderDiag.SetLocation(uri)
 		folderDiag.Show()
 	}
 }

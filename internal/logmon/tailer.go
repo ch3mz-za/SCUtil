@@ -83,8 +83,17 @@ func Run(ctx context.Context, cfg *Config, parser Parser) (<-chan *LogItem, <-ch
 				if err != nil {
 					return fmt.Errorf("archives glob: %w", err)
 				}
-				fmt.Fprintf(os.Stdout, "matches: %v\n", matches)
-				sort.Strings(matches) // oldest-ish → newest-ish
+
+				sort.Slice(matches, func(i, j int) bool {
+					fi, err1 := os.Stat(matches[i])
+					fj, err2 := os.Stat(matches[j])
+					if err1 != nil || err2 != nil {
+						// fallback to filename order if we can’t stat
+						return matches[i] < matches[j]
+					}
+					return fi.ModTime().Before(fj.ModTime())
+				})
+
 				for _, p := range matches {
 					if err := readFileOnce(ctx, p, emit); err != nil {
 						return err

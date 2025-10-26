@@ -7,7 +7,7 @@ import (
 	"github.com/ch3mz-za/SCUtil/internal/util"
 )
 
-func roundTimeToSeconds(t string) *time.Time {
+func RoundTimeToSeconds(t string) *time.Time {
 	parsedTime, err := time.Parse(time.RFC3339, t)
 	if err != nil {
 		return nil

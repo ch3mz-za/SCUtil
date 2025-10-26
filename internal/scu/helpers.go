@@ -18,6 +18,33 @@ const (
 	GameVerPTU  string = "PTU"
 )
 
+func GetGameVersions() []string {
+	dirs, err := os.ReadDir(GameDir)
+	if err != nil {
+		return []string{}
+	}
+
+	versions := make([]string, 0, len(dirs))
+	for _, d := range dirs {
+		versions = append(versions, d.Name())
+	}
+	return versions
+}
+
+// GetFilesListFromDir - Retrieve a list of all the files listed at a directory
+func GetFilesListFromDir(dir string) (*[]string, error) {
+	files, err := os.ReadDir(dir)
+	if err != nil {
+		return &[]string{}, errors.New("no backup directory found")
+	}
+
+	items := make([]string, 0, len(files))
+	for _, f := range files {
+		items = append(items, f.Name())
+	}
+	return &items, nil
+}
+
 // restoreFile - restores a single file with the ability to strip away the timestamp, if included
 func restoreFile(src, dst string, stripTimestamp bool) error {
 
@@ -169,4 +196,31 @@ func IsGameDirectory(gameDir string) bool {
 		}
 	}
 	return false
+}
+
+func deleteAllFilesWithExclusions(dir string, exclusions ...string) error {
+	err := filepath.Walk(dir,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if !info.IsDir() {
+				for _, ex := range exclusions {
+					if strings.HasSuffix(path, ex) {
+						return nil
+					}
+				}
+
+				if err := os.Remove(path); err != nil {
+					return nil
+				}
+			}
+
+			return nil
+		})
+	if err != nil {
+		return fmt.Errorf("error removing directory '%s':\n %s", dir, err.Error())
+	}
+	return nil
 }
