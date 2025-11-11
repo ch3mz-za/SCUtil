@@ -3,7 +3,7 @@ name: Release Build
 on:
   push:
     tags:
-      - 'v*'  # Triggers on version tags like v1.0.0, v2.7.0, etc.
+      - "v*" # Triggers on version tags like v1.0.0, v2.7.0, etc.
 
 jobs:
   build-and-release:
@@ -16,7 +16,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history to verify branch
+          fetch-depth: 0 # Fetch all history to verify branch
 
       - name: Verify tag is on master branch
         run: |
@@ -29,7 +29,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24.0'
+          go-version: "1.24.0"
 
       - name: Install dependencies
         run: |
@@ -42,7 +42,7 @@ jobs:
 
       - name: Install Fyne CLI
         run: |
-          go install fyne.io/fyne/v2/cmd/fyne@latest
+          go install fyne.io/tools/cmd/fyne@latest
 
       - name: Cache Go modules
         uses: actions/cache@v4
