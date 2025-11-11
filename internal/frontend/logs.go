@@ -1,6 +1,7 @@
 package frontend
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -18,29 +19,241 @@ import (
 
 	"github.com/ch3mz-za/SCUtil/internal/logmon"
 	"github.com/ch3mz-za/SCUtil/internal/scu"
+	"github.com/ch3mz-za/SCUtil/internal/util"
 )
 
+const (
+	logItemLimit          int    = 500
+	logItemAggregateLimit int    = 5000
+	prefixAggregateLog    string = "Aggregated"
+)
+
+type ParseOption int
+
+const (
+	TailFile ParseOption = iota
+	SingleFile
+	AggregateFiles
+)
+
+type FilterOption int
+
+const (
+	None FilterOption = iota
+	Humans
+	Vehicles
+	Search
+)
+
+// logViewerState holds the state for the log viewer
+type logViewerState struct {
+	logItems      []*logmon.LogItem
+	filteredItems []*logmon.LogItem // Filtered subset for display
+	activeFilter  FilterOption
+	activeQuery   string
+	cancelFn      context.CancelFunc
+	btnEnabled    bool
+}
+
+// logViewCtx holds the log viewer's visual object as context for various functions
+type logViewCtx struct {
+	win         fyne.Window
+	logList     *widget.List
+	progressBar *dialog.CustomDialog
+}
+
+// startLogParser initializes and runs the log parser in the background
+func startLogParser(
+	lvCtx *logViewCtx,
+	state *logViewerState,
+	cfg *logmon.Config,
+	parseOption ParseOption,
+) (context.CancelFunc, string, error) {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	parser := logmon.GameParser(logmon.DefaultAD(), logmon.DefaultVD())
+	out, errs := logmon.Run(ctx, cfg, parser)
+
+	var (
+		f *os.File
+		w *bufio.Writer
+	)
+
+	// Setup for background processing
+	var filePath string
+	switch parseOption {
+	case SingleFile, TailFile:
+		state.logItems = make([]*logmon.LogItem, 0, logItemLimit)
+	case AggregateFiles:
+		state.logItems = make([]*logmon.LogItem, 0, logItemAggregateLimit)
+
+		destDir := filepath.Join(scu.AppDir, scu.AggregatedLogsDir)
+		if err := util.CreateDirIfNotExist(destDir); err != nil {
+			return cancel, "", err
+		}
+
+		var err error
+		filePath = filepath.Join(destDir, generateLogName())
+		f, err = os.OpenFile(
+			filePath,
+			os.O_CREATE|os.O_WRONLY|os.O_APPEND,
+			0644,
+		)
+		if err != nil {
+			return cancel, "", err
+		}
+		w = bufio.NewWriter(f)
+	}
+
+	// Process in background to avoid blocking UI
+	go func() {
+		defer func() {
+			if parseOption == AggregateFiles {
+				if w != nil {
+					_ = w.Flush()
+				}
+				if f != nil {
+					_ = f.Close()
+				}
+				fyne.Do(func() {
+					if lvCtx.progressBar != nil {
+						lvCtx.progressBar.Hide()
+					}
+				})
+			}
+		}()
+
+		for out != nil || errs != nil {
+			select {
+			case s, ok := <-out:
+				if !ok {
+					out = nil
+					continue
+				}
+
+				switch parseOption {
+				case SingleFile, TailFile:
+					state.logItems = append(state.logItems, s)
+
+					// Cap memory
+					if len(state.logItems) > logItemLimit {
+						state.logItems = state.logItems[len(state.logItems)-logItemLimit:]
+						// Also cap filtered items if needed
+						if len(state.filteredItems) > logItemLimit {
+							state.filteredItems = state.filteredItems[len(state.filteredItems)-logItemLimit:]
+						}
+					}
+
+					// Append to filtered list if this item matches current predicate
+					if filterMatch(s, state.activeFilter, state.activeQuery) {
+						state.filteredItems = append(state.filteredItems, s)
+						fyne.Do(func() {
+							lvCtx.logList.Refresh()
+							lvCtx.logList.ScrollToBottom()
+						})
+					}
+
+				case AggregateFiles:
+					res := parseLogResult(s)
+					resStr := res.(*widget.RichText).String()
+
+					if w != nil {
+						_, err := w.WriteString(resStr + "\n")
+						if err != nil {
+							fyne.Do(func() { dialog.ShowError(err, lvCtx.win) })
+						}
+					}
+				}
+
+			case e, ok := <-errs:
+				if !ok {
+					errs = nil
+					continue
+				}
+				// Non-fatal; log and keep going
+				fmt.Fprintf(os.Stderr, "warn: %v\n", e)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
+	return cancel, filePath, nil
+}
+
 func logs(win fyne.Window) fyne.CanvasObject {
-	// State
-	logItems := make([]*logmon.LogItem, 0, 500) // in-memory store
-	activeFilter := None                        // or Humans/Vehicles/Search
-	activeQuery := ""                           // search string
+	// Initialize state
+	state := &logViewerState{
+		logItems:      make([]*logmon.LogItem, 0, logItemLimit),
+		filteredItems: make([]*logmon.LogItem, 0, logItemLimit),
+		activeFilter:  None,
+		activeQuery:   "",
+	}
 
-	// --- Multi-line log view using VBox inside a VScroll (variable-height rows) ---
-	logBox := container.NewVBox()
-	scroll := container.NewVScroll(logBox)
+	// Create virtualized list for high performance
+	logList := widget.NewList(
+		// Length function
+		func() int {
+			return len(state.filteredItems)
+		},
+		// CreateItem - returns a template RichText widget
+		func() fyne.CanvasObject {
+			r := widget.NewRichText()
+			r.Wrapping = fyne.TextWrap(fyne.TextTruncateClip) // Single line, no wrapping
+			return r
+		},
+		// UpdateItem - updates the template with data for index i
+		func(i widget.ListItemID, obj fyne.CanvasObject) {
+			if i >= len(state.filteredItems) {
+				return
+			}
+			r := obj.(*widget.RichText)
+			item := state.filteredItems[i]
 
-	// Rebuild the entire view (call this only when filter/search changes)
-	rebuild := func() {
-		fyne.Do(func() {
-			logBox.RemoveAll()
-			for _, it := range logItems {
-				if filterMatch(it, activeFilter, activeQuery) {
-					logBox.Add(parseLogResult(it))
+			// Reuse parseLogResult logic by extracting segments
+			switch item.Type {
+			case logmon.ActorDeath:
+				r.Segments = []widget.RichTextSegment{
+					newTextSegment(fmt.Sprintf("%s [AD] ", formatTimestamp(item.Time))),
+					newColoredBoldSegment(item.Attacker, theme.ColorNameError),
+					newTextSegment(" killed "),
+					newColoredBoldSegment(item.Victim, theme.ColorNamePrimary),
+					newTextSegment(" using "),
+					newBoldSegment(item.Weapon),
+				}
+
+			case logmon.VehicleDestruction:
+				r.Segments = []widget.RichTextSegment{
+					newTextSegment(fmt.Sprintf("%s [VD] ", formatTimestamp(item.Time))),
+					newColoredBoldSegment(item.Attacker, theme.ColorNameError),
+					newTextSegment(" destroyed "),
+					newColoredBoldSegment(item.Vehicle, theme.ColorNamePrimary),
+					newTextSegment(" using "),
+					newBoldSegment(item.Weapon),
+					newTextSegment(" at "),
+					newBoldSegment(item.Location),
+				}
+
+			default:
+				r.Segments = []widget.RichTextSegment{
+					newTextSegment(fmt.Sprintf("Unknown Event: %s", item.Type)),
 				}
 			}
-			logBox.Refresh()
-			scroll.ScrollToBottom()
+			r.Refresh()
+		},
+	)
+
+	// Rebuild the filtered list (call this when filter/search changes)
+	rebuild := func() {
+		state.filteredItems = state.filteredItems[:0]
+		for _, it := range state.logItems {
+			if filterMatch(it, state.activeFilter, state.activeQuery) {
+				state.filteredItems = append(state.filteredItems, it)
+			}
+		}
+		fyne.Do(func() {
+			logList.Refresh()
+			logList.ScrollToBottom()
 		})
 	}
 
@@ -52,90 +265,74 @@ func logs(win fyne.Window) fyne.CanvasObject {
 	logFilePath.Set(filepath.Join(scu.GameDir, selectionGameVersion.Selected, "Game.log")) // scu.GameLogBackupDir, "Game Build(10275505) 19 Sep 25 (21 30 24).log")
 
 	selectionGameVersion.OnChanged = func(s string) {
-		logFilePath.Set(filepath.Join(scu.GameDir, selectionGameVersion.Selected, "Game.log"))
+		logFilePath.Set(getGameLogPath(selectionGameVersion))
 	}
 
 	logFileEntry := widget.NewEntryWithData(logFilePath)
-
-	var (
-		btnEnabled bool
-		cancelFn   context.CancelFunc
-	)
+	logFileEntry.Validator = nil
 
 	btnStartParse := widget.NewButtonWithIcon("Start", theme.MediaPlayIcon(), nil)
 
-	runParser := func(cfg *logmon.Config, withButtonReset bool) context.CancelFunc {
-		ctx, cancel := context.WithCancel(context.Background())
+	progressBar := dialog.NewCustomWithoutButtons("Loading...", widget.NewProgressBarInfinite(), win)
 
-		parser := logmon.GameParser(logmon.DefaultAD(), logmon.DefaultVD())
-		out, errs := logmon.Run(ctx, cfg, parser)
+	lvCtx := &logViewCtx{
+		win:         win,
+		logList:     logList,
+		progressBar: progressBar,
+	}
 
-		// Process in background to avoid blocking UI
-		go func() {
-			for out != nil || errs != nil {
-				select {
-				case s, ok := <-out:
-					if !ok {
-						out = nil
-						continue
-					}
-					// keep everything
-					logItems = append(logItems, s)
-
-					// (optional) cap memory
-					if len(logItems) > 500 {
-						logItems = logItems[len(logItems)-500:]
-					}
-
-					// append only if this item matches current predicate
-					if filterMatch(s, activeFilter, activeQuery) {
-						fyne.Do(func() {
-							logBox.Add(parseLogResult(s))
-							logBox.Refresh()
-							scroll.ScrollToBottom()
-						})
-					}
-				case e, ok := <-errs:
-					if !ok {
-						errs = nil
-						continue
-					}
-					// non-fatal; log and keep going
-					fmt.Fprintf(os.Stderr, "warn: %v\n", e)
-				case <-ctx.Done():
-					return
-				}
-			}
-
-			// auto-reset button when stream finishes
-			if withButtonReset {
-				fyne.Do(func() {
-					btnEnabled = false
-					btnStartParse.Icon = theme.MediaPlayIcon()
-					btnStartParse.Text = "Start"
-					btnStartParse.Refresh()
-				})
-			}
-		}()
-		return cancel
+	runParser := func(cfg *logmon.Config, parseOption ParseOption) (context.CancelFunc, string, error) {
+		return startLogParser(lvCtx, state, cfg, parseOption)
 	}
 	btnFilterAll := widget.NewButton("All", nil)
 	btnFilterHumans := widget.NewButton("Humans", nil)
 	btnFilterVehicles := widget.NewButton("Vehicles", nil)
 
-	btnOpenLogs := widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
+	btnAggregate := widget.NewButton("Aggregate Logs", func() {
+		conf := &logmon.Config{
+			Mode:      logmon.ModeOnce,
+			FromStart: true,
+			ChanSize:  1000,
+			Archives:  filepath.Join(scu.GameDir, selectionGameVersion.Selected, scu.GameLogBackupDir),
+		}
+		_, filePath, err := runParser(conf, AggregateFiles)
+		if err != nil {
+			dialog.ShowError(err, win)
+			return
+		}
 
-		pathCh, errCh := fileOpenPath(
+		dialog.ShowConfirm("Open aggregated file", "Open aggregated file?", func(open bool) {
+			if open {
+				readAggregatedLog(filePath, lvCtx, state)
+			}
+		}, win)
+	})
+
+	// Open logs
+	btnOpenLogs := widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
+		var (
+			pathCh <-chan string
+			errCh  <-chan error
+			conf   *logmon.Config
+		)
+
+		pathCh, errCh = fileOpenPath(
 			filepath.Join(scu.GameDir, selectionGameVersion.Selected, scu.GameLogBackupDir),
 			win,
 			storage.NewExtensionFileFilter([]string{".log"}),
 		)
 
+		conf = &logmon.Config{
+			Mode:      logmon.ModeOnce,
+			FromStart: true,
+			ChanSize:  256,
+		}
+
 		// Reset state for a fresh file
-		logItems = logItems[:0]
-		activeQuery = ""
-		activeFilter = None
-		// Reset filter buttone states
+		state.logItems = state.logItems[:0]
+		state.activeQuery = ""
+		state.activeFilter = None
+		// Reset filter button states
 		btnFilterAll.FocusGained()
 		btnFilterHumans.FocusLost()
 		btnFilterVehicles.FocusLost()
@@ -145,12 +342,23 @@ func logs(win fyne.Window) fyne.CanvasObject {
 		go func() {
 			select {
 			case p := <-pathCh:
-				_ = runParser(&logmon.Config{
-					ActivePath: p,
-					Mode:       logmon.ModeOnce,
-					FromStart:  true,
-					ChanSize:   256,
-				}, false)
+				logFilePath.Set(p)
+				f, err := os.Stat(p)
+				if err != nil {
+					dialog.ShowError(err, win)
+				}
+
+				if strings.HasPrefix(f.Name(), prefixAggregateLog) {
+					// read aggregated logs
+					readAggregatedLog(p, lvCtx, state)
+				} else {
+					conf.ActivePath = p
+					_, _, err = runParser(conf, SingleFile)
+					if err != nil {
+						dialog.ShowError(err, win)
+					}
+				}
+
 			case err := <-errCh:
 				if err != nil {
 					dialog.ShowError(err, win)
@@ -159,14 +367,15 @@ func logs(win fyne.Window) fyne.CanvasObject {
 		}()
 	})
 
+	// Start live tailing of logs
 	btnStartParse.OnTapped = func() {
-		if btnEnabled {
+		if state.btnEnabled {
 			// Stop
-			btnEnabled = false
+			state.btnEnabled = false
 			btnStartParse.Icon = theme.MediaPlayIcon()
 			btnStartParse.Text = "Start"
-			if cancelFn != nil {
-				cancelFn()
+			if state.cancelFn != nil {
+				state.cancelFn()
 			}
 			btnOpenLogs.Enable()
 			btnStartParse.Refresh()
@@ -174,38 +383,43 @@ func logs(win fyne.Window) fyne.CanvasObject {
 		}
 
 		// Start
-		logItems = logItems[:0]
-		btnEnabled = true
+		state.logItems = state.logItems[:0]
+		state.btnEnabled = true
 		btnOpenLogs.Disable()
 		btnStartParse.Icon = theme.MediaStopIcon()
 		btnStartParse.Text = "Stop"
 		btnStartParse.Refresh()
 
+		logFilePath.Set(getGameLogPath(selectionGameVersion))
 		logFilePathStr, err := logFilePath.Get()
 		if err != nil {
 			dialog.ShowError(err, win)
 			return
 		}
 
-		rebuild()
+		// Clear filtered items for fresh start
+		state.filteredItems = state.filteredItems[:0]
+		logList.Refresh()
 
-		cancelFn = runParser(&logmon.Config{
+		state.cancelFn, _, err = runParser(&logmon.Config{
 			ActivePath: logFilePathStr,
 			Mode:       logmon.ModeTail,
 			PollEvery:  5 * time.Second,
 			FromStart:  true,
 			ChanSize:   256,
-		}, true)
+		}, TailFile)
+		if err != nil {
+			dialog.ShowError(err, win)
+		}
 	}
 
 	// top controlls
-
 	btnFilterAll.FocusGained()
 	btnFilterHumans.FocusLost()
 	btnFilterVehicles.FocusLost()
 
 	btnFilterAll.OnTapped = func() {
-		activeFilter = None
+		state.activeFilter = None
 		btnFilterAll.FocusGained()
 		btnFilterHumans.FocusLost()
 		btnFilterVehicles.FocusLost()
@@ -213,7 +427,7 @@ func logs(win fyne.Window) fyne.CanvasObject {
 	}
 
 	btnFilterHumans.OnTapped = func() {
-		activeFilter = Humans
+		state.activeFilter = Humans
 		btnFilterHumans.FocusGained()
 		btnFilterAll.FocusLost()
 		btnFilterVehicles.FocusLost()
@@ -221,7 +435,7 @@ func logs(win fyne.Window) fyne.CanvasObject {
 	}
 
 	btnFilterVehicles.OnTapped = func() {
-		activeFilter = Vehicles
+		state.activeFilter = Vehicles
 		btnFilterVehicles.FocusGained()
 		btnFilterHumans.FocusLost()
 		btnFilterAll.FocusLost()
@@ -232,30 +446,21 @@ func logs(win fyne.Window) fyne.CanvasObject {
 	searchField.PlaceHolder = "Search"
 	btnSearch := widget.NewButtonWithIcon("", theme.SearchIcon(), func() {
 		q := strings.TrimSpace(searchField.Text)
-		activeQuery = q
+		state.activeQuery = q
 		if q == "" {
 			// If query cleared, fall back to last non-search filter (or All)
-			activeFilter = None
+			state.activeFilter = None
 		} else {
-			activeFilter = Search
+			state.activeFilter = Search
 		}
 		rebuild()
 	})
 
 	top := container.NewBorder(nil, nil, container.NewHBox(btnFilterAll, btnFilterHumans, btnFilterVehicles), btnSearch, searchField)
-	bottom := container.NewBorder(nil, nil, container.NewHBox(selectionGameVersion, btnStartParse), btnOpenLogs, logFileEntry)
+	bottom := container.NewBorder(nil, nil, container.NewHBox(selectionGameVersion, btnStartParse), container.NewHBox(btnOpenLogs, btnAggregate), logFileEntry)
 
-	return widget.NewCard("", "", container.NewBorder(top, bottom, nil, nil, scroll))
+	return widget.NewCard("", "", container.NewBorder(top, bottom, nil, nil, logList))
 }
-
-type FilterOption int
-
-const (
-	None FilterOption = iota
-	Humans
-	Vehicles
-	Search
-)
 
 func filterMatch(item *logmon.LogItem, opt FilterOption, q string) bool {
 	switch opt {
@@ -281,151 +486,88 @@ func filterMatch(item *logmon.LogItem, opt FilterOption, q string) bool {
 	}
 }
 
-func filterLogs(items []*logmon.LogItem, opt FilterOption, searchFields ...string) []fyne.CanvasObject {
-	var filterToType = map[FilterOption]logmon.EventType{
-		Humans:   logmon.ActorDeath,
-		Vehicles: logmon.VehicleDestruction,
+var (
+	AggregateAD logmon.IndicesAD = logmon.IndicesAD{Time: 0, Victim: 4, Attacker: 2, Weapon: 6}
+	AggregateVD logmon.IndicesVD = logmon.IndicesVD{Time: 0, Vehicle: 4, Location: 8, Driver: -1, Attacker: 2, Weapon: 6}
+)
+
+func stringToLogItem(line string) *logmon.LogItem {
+	const (
+		LogTypeIndex int    = 1
+		ActorDeath   string = "[AD]"
+		VehicleDeath string = "[VD]"
+	)
+
+	if line == "" {
+		return nil
 	}
 
-	filtered := make([]fyne.CanvasObject, 0, len(items))
+	var fields []string
+	get := func(i int) string {
+		if i < 0 || i >= len(fields) {
+			return ""
+		}
+		return fields[i]
+	}
 
-	switch opt {
-	case None:
-		for _, item := range items {
-			filtered = append(filtered, parseLogResult(item))
+	fields = strings.Fields(line)
+	switch fields[LogTypeIndex] {
+	case ActorDeath:
+		return &logmon.LogItem{
+			Time:     logmon.RoundTimeToSeconds(get(AggregateAD.Time)),
+			Attacker: get(AggregateAD.Attacker),
+			Victim:   get(AggregateAD.Victim),
+			Weapon:   get(AggregateAD.Weapon),
+			Type:     logmon.ActorDeath,
 		}
-	case Humans, Vehicles:
-		for _, item := range items {
-			if item.Type == filterToType[opt] {
-				filtered = append(filtered, parseLogResult(item))
-			}
-		}
-	case Search:
-		q := ""
-		if len(searchFields) > 0 {
-			q = strings.ToLower(searchFields[0])
-		}
-		if q == "" {
-			// behave like None when query empty
-			for _, item := range items {
-				filtered = append(filtered, parseLogResult(item))
-			}
-			break
-		}
-		for _, item := range items {
-			// Expand/adjust these fields as needed
-			if strings.Contains(strings.ToLower(item.Attacker), q) ||
-				strings.Contains(strings.ToLower(item.Victim), q) ||
-				strings.Contains(strings.ToLower(item.Vehicle), q) ||
-				strings.Contains(strings.ToLower(item.Weapon), q) ||
-				strings.Contains(strings.ToLower(item.Location), q) {
-				filtered = append(filtered, parseLogResult(item))
-			}
+	case VehicleDeath:
+		return &logmon.LogItem{
+			Time:     logmon.RoundTimeToSeconds(get(AggregateVD.Time)),
+			Vehicle:  get(AggregateVD.Vehicle),
+			Attacker: get(AggregateVD.Attacker),
+			Location: get(AggregateVD.Location),
+			Driver:   get(AggregateVD.Driver),
+			Weapon:   get(AggregateVD.Weapon),
+			Type:     logmon.VehicleDestruction,
 		}
 	}
-	return filtered
+
+	return nil
 }
 
-func parseLogResult(i *logmon.LogItem) fyne.CanvasObject {
-	switch i.Type {
-	case logmon.ActorDeath:
-		r := widget.NewRichText()
-		r.Wrapping = fyne.TextWrapWord
-		r.Segments = []widget.RichTextSegment{
-			&widget.TextSegment{
-				Text:  fmt.Sprintf("%s - ", i.Time),
-				Style: widget.RichTextStyle{Inline: true},
-			},
-			&widget.TextSegment{
-				Text: i.Attacker,
-				Style: widget.RichTextStyle{
-					ColorName: theme.ColorNameError,
-					TextStyle: fyne.TextStyle{Bold: true},
-					Inline:    true,
-				},
-			},
-			&widget.TextSegment{
-				Text:  " killed ",
-				Style: widget.RichTextStyle{Inline: true},
-			},
-			&widget.TextSegment{
-				Text: i.Victim,
-				Style: widget.RichTextStyle{
-					ColorName: theme.ColorNamePrimary,
-					TextStyle: fyne.TextStyle{Bold: true},
-					Inline:    true,
-				},
-			},
-			&widget.TextSegment{
-				Text:  " using ",
-				Style: widget.RichTextStyle{Inline: true},
-			},
-			&widget.TextSegment{
-				Text: i.Weapon,
-				Style: widget.RichTextStyle{
-					TextStyle: fyne.TextStyle{Bold: true},
-				},
-			},
-		}
-		return r
-	case logmon.VehicleDestruction:
-		r := widget.NewRichText()
-		r.Wrapping = fyne.TextWrapWord
-		r.Segments = []widget.RichTextSegment{
-			&widget.TextSegment{
-				Text:  fmt.Sprintf("%s - ", i.Time),
-				Style: widget.RichTextStyle{Inline: true},
-			},
-			&widget.TextSegment{
-				Text: i.Attacker,
-				Style: widget.RichTextStyle{
-					ColorName: theme.ColorNameError,
-					TextStyle: fyne.TextStyle{Bold: true},
-					Inline:    true,
-				},
-			},
-			&widget.TextSegment{
-				Text:  " destroyed ",
-				Style: widget.RichTextStyle{Inline: true},
-			},
-			&widget.TextSegment{
-				Text: i.Vehicle,
-				Style: widget.RichTextStyle{
-					ColorName: theme.ColorNamePrimary,
-					TextStyle: fyne.TextStyle{Bold: true},
-					Inline:    true,
-				},
-			},
-			&widget.TextSegment{
-				Text:  " using ",
-				Style: widget.RichTextStyle{Inline: true},
-			},
-			&widget.TextSegment{
-				Text: i.Weapon,
-				Style: widget.RichTextStyle{
-					TextStyle: fyne.TextStyle{Bold: true},
-					Inline:    true,
-				},
-			},
-			&widget.TextSegment{
-				Text:  " at ",
-				Style: widget.RichTextStyle{Inline: true},
-			},
-			&widget.TextSegment{
-				Text: i.Location,
-				Style: widget.RichTextStyle{
-					TextStyle: fyne.TextStyle{Bold: true},
-					Inline:    true,
-				},
-			},
-		}
-		return r
-	default:
-		r := widget.NewRichText()
-		r.Wrapping = fyne.TextWrapWord
-		r.Segments = []widget.RichTextSegment{
-			&widget.TextSegment{Text: fmt.Sprintf("Unknown Event: %s", i.Type)},
-		}
-		return r
+func readAggregatedLog(filePath string, lvCtx *logViewCtx, state *logViewerState) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		dialog.ShowError(err, lvCtx.win)
+		return
 	}
+	defer f.Close()
+
+	lvCtx.progressBar.Show()
+
+	// Load all items into memory first (no UI updates during scan)
+	s := bufio.NewScanner(f)
+	for s.Scan() {
+		item := stringToLogItem(s.Text())
+		state.logItems = append(state.logItems, item)
+
+		// Cap memory
+		if len(state.logItems) > logItemAggregateLimit {
+			state.logItems = state.logItems[len(state.logItems)-logItemAggregateLimit:]
+		}
+	}
+
+	// Rebuild filtered list and update UI
+	state.filteredItems = state.filteredItems[:0]
+	for _, it := range state.logItems {
+		if filterMatch(it, state.activeFilter, state.activeQuery) {
+			state.filteredItems = append(state.filteredItems, it)
+		}
+	}
+
+	fyne.Do(func() {
+		lvCtx.progressBar.Dismiss()
+		lvCtx.logList.Refresh()
+		lvCtx.logList.ScrollToBottom()
+	})
 }

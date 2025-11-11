@@ -2,6 +2,7 @@ package logmon
 
 import (
 	"strings"
+	"time"
 )
 
 type EventType string
@@ -16,7 +17,7 @@ type LogItem struct {
 	Attacker string
 	Driver   string
 	Location string
-	Time     string
+	Time     *time.Time
 	Type     EventType
 	Vehicle  string
 	Victim   string
@@ -47,7 +48,7 @@ func GameParser(ad IndicesAD, vd IndicesVD) Parser {
 		if strings.Contains(line, string(ActorDeath)) {
 			fields = strings.Fields(line)
 			return &LogItem{
-				Time:     roundTimeToSeconds(trimAngleBrackets(get(ad.Time))),
+				Time:     RoundTimeToSeconds(trimAngleBrackets(get(ad.Time))),
 				Attacker: normalize(get(ad.Attacker)),
 				Victim:   normalize(get(ad.Victim)),
 				Weapon:   normalize(get(ad.Weapon)),
@@ -58,7 +59,7 @@ func GameParser(ad IndicesAD, vd IndicesVD) Parser {
 		if strings.Contains(line, string(VehicleDestruction)) {
 			fields = strings.Fields(line)
 			return &LogItem{
-				Time:     roundTimeToSeconds(trimAngleBrackets(get(ad.Time))),
+				Time:     RoundTimeToSeconds(trimAngleBrackets(get(vd.Time))),
 				Vehicle:  normalize(get(vd.Vehicle)),
 				Attacker: normalize(get(vd.Attacker)),
 				Location: trimQuotes(get(vd.Location)),
