@@ -5,4 +5,4 @@ optimised-build:
 	go build -ldflags "-s -w"
 
 package:
-    fyne package --release --os=windows --tags="-s,-w"
+	fyne package --release --os=windows --tags="-s,-w"
