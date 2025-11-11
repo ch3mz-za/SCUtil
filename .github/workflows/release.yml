@@ -1,0 +1,118 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'  # Triggers on version tags like v1.0.0, v2.7.0, etc.
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    # Only run if the tag is on the master branch
+    if: github.ref_type == 'tag'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history to verify branch
+
+      - name: Verify tag is on master branch
+        run: |
+          # Check if the tagged commit exists in master branch
+          if ! git branch -r --contains ${{ github.sha }} | grep -q 'origin/master'; then
+            echo "Tag is not on master branch. Exiting."
+            exit 1
+          fi
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.0'
+
+      - name: Install dependencies
+        run: |
+          # Install GCC and build tools required for Fyne
+          sudo apt-get update
+          sudo apt-get install -y gcc libgl1-mesa-dev xorg-dev
+
+          # Install mingw-w64 for Windows cross-compilation
+          sudo apt-get install -y gcc-mingw-w64-x86-64
+
+      - name: Install Fyne CLI
+        run: |
+          go install fyne.io/fyne/v2/cmd/fyne@latest
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build with Fyne package
+        run: make package
+
+      - name: Find executable
+        id: find_exe
+        run: |
+          # Fyne package creates the executable in the current directory
+          # Look for SCUtil.exe or similar
+          if [ -f "SCUtil.exe" ]; then
+            echo "exe_path=SCUtil.exe" >> $GITHUB_OUTPUT
+          elif [ -f "bin/SCUtil.exe" ]; then
+            echo "exe_path=bin/SCUtil.exe" >> $GITHUB_OUTPUT
+          else
+            echo "Executable not found!"
+            ls -la
+            exit 1
+          fi
+
+      - name: Compress executable
+        run: |
+          # Use 7z for maximum compression (ultra settings)
+          sudo apt-get install -y p7zip-full
+
+          # Extract version from tag (e.g., v2.7.0 -> 2.7.0)
+          VERSION=${GITHUB_REF#refs/tags/v}
+
+          # Create archive with maximum compression
+          7z a -t7z -m0=lzma2 -mx=9 -mfb=64 -md=32m -ms=on "SCUtil-${VERSION}-windows-amd64.7z" ${{ steps.find_exe.outputs.exe_path }}
+
+          echo "ARCHIVE_NAME=SCUtil-${VERSION}-windows-amd64.7z" >> $GITHUB_ENV
+          echo "VERSION=${VERSION}" >> $GITHUB_ENV
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ env.ARCHIVE_NAME }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            ## SCUtil ${{ env.VERSION }}
+
+            Windows executable built with Fyne packaging.
+
+            ### Download
+            Download the 7z archive below and extract `SCUtil.exe`.
+
+            ### Requirements
+            - Windows 10/11 (64-bit)
+            - Star Citizen installation
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SCUtil-${{ env.VERSION }}-windows-amd64
+          path: ${{ env.ARCHIVE_NAME }}
+          retention-days: 30
