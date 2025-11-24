@@ -100,7 +100,11 @@ func p4kData(win fyne.Window) fyne.CanvasObject {
 		btnOpenSearchResult.Enable()
 	}
 
-	selectionGameVersion := widget.NewSelect(scu.GetGameVersions(), func(value string) {
+	selectionGameVersion := newGameVersionSelect(func(value string) {
+		if value == "" {
+			return
+		}
+
 		// set P4k filename open button state
 		btnOpenP4kFilenames.Disable()
 		p4kFilenamesResult = filepath.Join(scu.AppDir, fmt.Sprintf(scu.P4kFilenameResultsDir, value))

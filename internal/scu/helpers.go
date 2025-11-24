@@ -19,7 +19,7 @@ const (
 )
 
 func GetGameVersions() []string {
-	dirs, err := os.ReadDir(GameDir)
+	dirs, err := os.ReadDir(GetGameDir())
 	if err != nil {
 		return []string{}
 	}

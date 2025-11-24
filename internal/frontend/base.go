@@ -17,6 +17,10 @@ func SetupMainWindowContent(w fyne.Window) fyne.CanvasObject {
 
 	var err error
 	var cfg = &config.AppConfig{}
+	var gameDir string
+
+	// Initialize the game directory binding listener
+	initGameDirBinding()
 
 	scu.AppDir, _ = os.Getwd()
 	if common.Exists(config.AppConfigPath) {
@@ -24,7 +28,9 @@ func SetupMainWindowContent(w fyne.Window) fyne.CanvasObject {
 		if err != nil {
 			log.Fatalf("unable to load config: %s", err.Error())
 		}
-		scu.GameDir = cfg.GameDir
+
+		gameDirBind.Set(cfg.GameDir)
+		gameDir = cfg.GameDir
 	}
 
 	tabSettings := container.NewTabItemWithIcon("Settings", theme.SettingsIcon(), settings(w, cfg))
@@ -39,13 +45,23 @@ func SetupMainWindowContent(w fyne.Window) fyne.CanvasObject {
 	mainTabs.SetTabLocation(container.TabLocationLeading)
 
 	mainTabs.OnSelected = func(ti *container.TabItem) {
-		if ti.Text == "Settings" && scu.GameDir == "" {
+		gameDir = getGameDir(w)
+
+		if ti.Text == "Settings" && gameDir == "" {
 			dialog.ShowInformation("Empty Game Directory", "Please set your game directory", w)
 		}
 	}
 
-	if scu.GameDir == "" {
+	if gameDir == "" {
 		mainTabs.Select(tabSettings)
 	}
 	return mainTabs
+}
+
+func getGameDir(w fyne.Window) string {
+	gameDir, err := gameDirBind.Get()
+	if err != nil && w != nil {
+		dialog.ShowError(err, w)
+	}
+	return gameDir
 }

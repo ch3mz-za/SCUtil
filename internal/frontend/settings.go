@@ -14,10 +14,26 @@ import (
 	"github.com/ch3mz-za/SCUtil/internal/scu"
 )
 
+var (
+	gameDirBind         = binding.NewString()
+	gameDirBindListener binding.DataListener
+)
+
+func initGameDirBinding() {
+	// Only add listener once
+	if gameDirBindListener == nil {
+		gameDirBindListener = binding.NewDataListener(func() {
+			if dir, err := gameDirBind.Get(); err == nil {
+				scu.SetGameDir(dir)
+			}
+		})
+		gameDirBind.AddListener(gameDirBindListener)
+	}
+}
+
 func settings(win fyne.Window, cfg *config.AppConfig) fyne.CanvasObject {
 
-	gameDirData := binding.BindString(&scu.GameDir)
-	gameDirLabel := widget.NewEntryWithData(gameDirData)
+	gameDirLabel := widget.NewEntryWithData(gameDirBind)
 	progressBar := widget.NewProgressBarInfinite()
 	progressBar.Hide()
 
@@ -43,7 +59,7 @@ func settings(win fyne.Window, cfg *config.AppConfig) fyne.CanvasObject {
 				return
 			}
 
-			if err := gameDirData.Set(gameDir); err != nil {
+			if err := gameDirBind.Set(gameDir); err != nil {
 				dialog.ShowError(err, win)
 			}
 

@@ -258,14 +258,19 @@ func logs(win fyne.Window) fyne.CanvasObject {
 	}
 
 	// Bottom controls
-	selectionGameVersion := widget.NewSelect(scu.GetGameVersions(), nil)
-	selectionGameVersion.Selected = scu.GameVerLIVE
-
 	logFilePath := binding.NewString()
-	logFilePath.Set(filepath.Join(scu.GameDir, selectionGameVersion.Selected, "Game.log")) // scu.GameLogBackupDir, "Game Build(10275505) 19 Sep 25 (21 30 24).log")
 
+	// Create the select widget without onChange first
+	selectionGameVersion := newGameVersionSelect(nil)
+
+	// Now set the onChange callback after the widget is fully initialized
 	selectionGameVersion.OnChanged = func(s string) {
 		logFilePath.Set(getGameLogPath(selectionGameVersion))
+	}
+
+	// Initialize log file path with default selection
+	if selectionGameVersion.Selected != "" {
+		logFilePath.Set(filepath.Join(getGameDir(win), selectionGameVersion.Selected, "Game.log"))
 	}
 
 	logFileEntry := widget.NewEntryWithData(logFilePath)
@@ -288,12 +293,19 @@ func logs(win fyne.Window) fyne.CanvasObject {
 	btnFilterHumans := widget.NewButton("Humans", nil)
 	btnFilterVehicles := widget.NewButton("Vehicles", nil)
 
-	btnAggregate := widget.NewButton("Aggregate Logs", func() {
+	btnAggregate := widget.NewButtonWithIcon("Aggregate Logs", theme.SearchReplaceIcon(), func() {
+		gameDir, err := gameDirBind.Get()
+		if err != nil {
+			dialog.ShowError(err, win)
+		}
+
+		showOp
+
 		conf := &logmon.Config{
 			Mode:      logmon.ModeOnce,
 			FromStart: true,
 			ChanSize:  1000,
-			Archives:  filepath.Join(scu.GameDir, selectionGameVersion.Selected, scu.GameLogBackupDir),
+			Archives:  filepath.Join(gameDir, selectionGameVersion.Selected, scu.GameLogBackupDir),
 		}
 		_, filePath, err := runParser(conf, AggregateFiles)
 		if err != nil {
@@ -309,7 +321,7 @@ func logs(win fyne.Window) fyne.CanvasObject {
 	})
 
 	// Open logs
-	btnOpenLogs := widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
+	btnOpenLogs := widget.NewButtonWithIcon("Open", theme.FolderOpenIcon(), func() {
 		var (
 			pathCh <-chan string
 			errCh  <-chan error
@@ -317,7 +329,7 @@ func logs(win fyne.Window) fyne.CanvasObject {
 		)
 
 		pathCh, errCh = fileOpenPath(
-			filepath.Join(scu.GameDir, selectionGameVersion.Selected, scu.GameLogBackupDir),
+			filepath.Join(getGameDir(win), selectionGameVersion.Selected, scu.GameLogBackupDir),
 			win,
 			storage.NewExtensionFileFilter([]string{".log"}),
 		)

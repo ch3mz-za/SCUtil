@@ -11,7 +11,7 @@ import (
 
 // ClearUserFolder - Clears all the data in the USER folder with the option to exclude control mappings
 func ClearUserFolder(version string, exclusionsEnabled bool) error {
-	userDir := filepath.Join(GameDir, version, "USER")
+	userDir := filepath.Join(GetGameDir(), version, "USER")
 	exclusion := filepath.Join(userDir, "Client", "0", "Controls")
 
 	err := filepath.Walk(userDir,
@@ -40,7 +40,7 @@ func ClearUserFolder(version string, exclusionsEnabled bool) error {
 
 // ClearAllDataExceptP4k - Clears all the data around the Data.p4k file
 func ClearAllDataExceptP4k(version string) error {
-	gameDir := filepath.Join(GameDir, version)
+	gameDir := filepath.Join(GetGameDir(), version)
 
 	files, err := common.ListAllFilesAndDirs(gameDir)
 	if err != nil {
