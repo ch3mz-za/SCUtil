@@ -171,42 +171,6 @@ func showOpenFileDialog(dirPath string, win fyne.Window, openOpt int) func() {
 	}
 }
 
-func showOpenFolderDialog(dirPath string, win fyne.Window, openOpt int) func() {
-	return func() {
-		enlargeWindowForDialog(win)
-		folderDiag := dialog.NewFolderOpen(func(path fyne.ListableURI, err error) {
-			defer resetToUserWindowSize(win)
-			if err != nil {
-				dialog.ShowError(err, win)
-				return
-			}
-			if path == nil {
-				return
-			}
-
-			switch openOpt {
-			case openExternally:
-				if err := open.Run(path.URI().Path()); err != nil {
-					dialog.ShowError(err, win)
-					return
-				}
-			case openImage:
-				showImage(reader)
-			default:
-				dialog.ShowError(errors.New("invalid mechanism for opening file"), win)
-			}
-
-		}, win)
-
-		uri, err := storage.ListerForURI(storage.NewFileURI(dirPath))
-		if err == nil {
-			folderDiag.SetLocation(uri)
-		}
-
-		folderDiag.Show()
-	}
-}
-
 func loadImage(f fyne.URIReadCloser) *canvas.Image {
 	data, err := io.ReadAll(f)
 	if err != nil {
