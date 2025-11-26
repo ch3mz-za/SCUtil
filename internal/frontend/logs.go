@@ -3,6 +3,7 @@ package frontend
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -68,8 +69,9 @@ func startLogParser(
 	state *logViewerState,
 	cfg *logmon.Config,
 	parseOption ParseOption,
-) (context.CancelFunc, string, error) {
+) (context.CancelFunc, <-chan struct{}, string, error) {
 	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
 
 	parser := logmon.GameParser(logmon.DefaultAD(), logmon.DefaultVD())
 	out, errs := logmon.Run(ctx, cfg, parser)
@@ -89,7 +91,8 @@ func startLogParser(
 
 		destDir := filepath.Join(scu.AppDir, scu.AggregatedLogsDir)
 		if err := util.CreateDirIfNotExist(destDir); err != nil {
-			return cancel, "", err
+			close(done)
+			return cancel, done, "", err
 		}
 
 		var err error
@@ -100,7 +103,8 @@ func startLogParser(
 			0644,
 		)
 		if err != nil {
-			return cancel, "", err
+			close(done)
+			return cancel, done, "", err
 		}
 		w = bufio.NewWriter(f)
 	}
@@ -121,6 +125,7 @@ func startLogParser(
 					}
 				})
 			}
+			close(done)
 		}()
 
 		for out != nil || errs != nil {
@@ -178,7 +183,7 @@ func startLogParser(
 		}
 	}()
 
-	return cancel, filePath, nil
+	return cancel, done, filePath, nil
 }
 
 func logs(win fyne.Window) fyne.CanvasObject {
@@ -258,14 +263,19 @@ func logs(win fyne.Window) fyne.CanvasObject {
 	}
 
 	// Bottom controls
-	selectionGameVersion := widget.NewSelect(scu.GetGameVersions(), nil)
-	selectionGameVersion.Selected = scu.GameVerLIVE
-
 	logFilePath := binding.NewString()
-	logFilePath.Set(filepath.Join(scu.GameDir, selectionGameVersion.Selected, "Game.log")) // scu.GameLogBackupDir, "Game Build(10275505) 19 Sep 25 (21 30 24).log")
 
+	// Create the select widget without onChange first
+	selectionGameVersion := newGameVersionSelect(nil)
+
+	// Now set the onChange callback after the widget is fully initialized
 	selectionGameVersion.OnChanged = func(s string) {
 		logFilePath.Set(getGameLogPath(selectionGameVersion))
+	}
+
+	// Initialize log file path with default selection
+	if selectionGameVersion.Selected != "" {
+		logFilePath.Set(filepath.Join(getGameDir(win), selectionGameVersion.Selected, "Game.log"))
 	}
 
 	logFileEntry := widget.NewEntryWithData(logFilePath)
@@ -281,35 +291,76 @@ func logs(win fyne.Window) fyne.CanvasObject {
 		progressBar: progressBar,
 	}
 
-	runParser := func(cfg *logmon.Config, parseOption ParseOption) (context.CancelFunc, string, error) {
+	runParser := func(cfg *logmon.Config, parseOption ParseOption) (context.CancelFunc, <-chan struct{}, string, error) {
 		return startLogParser(lvCtx, state, cfg, parseOption)
 	}
 	btnFilterAll := widget.NewButton("All", nil)
 	btnFilterHumans := widget.NewButton("Humans", nil)
 	btnFilterVehicles := widget.NewButton("Vehicles", nil)
 
-	btnAggregate := widget.NewButton("Aggregate Logs", func() {
-		conf := &logmon.Config{
-			Mode:      logmon.ModeOnce,
-			FromStart: true,
-			ChanSize:  1000,
-			Archives:  filepath.Join(scu.GameDir, selectionGameVersion.Selected, scu.GameLogBackupDir),
-		}
-		_, filePath, err := runParser(conf, AggregateFiles)
+	btnAggregate := widget.NewButtonWithIcon("Aggregate Logs", theme.SearchReplaceIcon(), func() {
+		gameDir, err := gameDirBind.Get()
 		if err != nil {
 			dialog.ShowError(err, win)
 			return
 		}
 
-		dialog.ShowConfirm("Open aggregated file", "Open aggregated file?", func(open bool) {
-			if open {
-				readAggregatedLog(filePath, lvCtx, state)
+		pathChan, errChan := folderOpenPath(filepath.Join(gameDir, selectionGameVersion.Selected, scu.GameLogBackupDir), win)
+
+		// Handle folder selection in goroutine to avoid blocking UI thread
+		go func() {
+			var aggregateDir string
+			select {
+			case p := <-pathChan:
+				if p == "" {
+					return
+				}
+				aggregateDir = p
+			case err := <-errChan:
+				// Don't show error if user just cancelled the dialog
+				if err != nil && !errors.Is(err, ErrFileOpenCancelled) {
+					fyne.Do(func() {
+						dialog.ShowError(err, win)
+					})
+				}
+				return
 			}
-		}, win)
+
+			// Show progress indicator while processing
+			fyne.Do(func() {
+				progressBar.Show()
+			})
+
+			conf := &logmon.Config{
+				Mode:      logmon.ModeOnce,
+				FromStart: true,
+				ChanSize:  1000,
+				Archives:  aggregateDir,
+			}
+			_, doneCh, filePath, err := runParser(conf, AggregateFiles)
+			if err != nil {
+				fyne.Do(func() {
+					progressBar.Hide()
+					dialog.ShowError(err, win)
+				})
+				return
+			}
+
+			go func() {
+				<-doneCh
+				fyne.Do(func() {
+					dialog.ShowConfirm("Open aggregated file", "Open aggregated file?", func(open bool) {
+						if open {
+							readAggregatedLog(filePath, lvCtx, state)
+						}
+					}, win)
+				})
+			}()
+		}()
 	})
 
 	// Open logs
-	btnOpenLogs := widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
+	btnOpenLogs := widget.NewButtonWithIcon("Open", theme.FolderOpenIcon(), func() {
 		var (
 			pathCh <-chan string
 			errCh  <-chan error
@@ -317,7 +368,7 @@ func logs(win fyne.Window) fyne.CanvasObject {
 		)
 
 		pathCh, errCh = fileOpenPath(
-			filepath.Join(scu.GameDir, selectionGameVersion.Selected, scu.GameLogBackupDir),
+			filepath.Join(getGameDir(win), selectionGameVersion.Selected, scu.GameLogBackupDir),
 			win,
 			storage.NewExtensionFileFilter([]string{".log"}),
 		)
@@ -353,7 +404,7 @@ func logs(win fyne.Window) fyne.CanvasObject {
 					readAggregatedLog(p, lvCtx, state)
 				} else {
 					conf.ActivePath = p
-					_, _, err = runParser(conf, SingleFile)
+					_, _, _, err = runParser(conf, SingleFile)
 					if err != nil {
 						dialog.ShowError(err, win)
 					}
@@ -401,7 +452,7 @@ func logs(win fyne.Window) fyne.CanvasObject {
 		state.filteredItems = state.filteredItems[:0]
 		logList.Refresh()
 
-		state.cancelFn, _, err = runParser(&logmon.Config{
+		state.cancelFn, _, _, err = runParser(&logmon.Config{
 			ActivePath: logFilePathStr,
 			Mode:       logmon.ModeTail,
 			PollEvery:  5 * time.Second,

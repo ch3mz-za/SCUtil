@@ -10,8 +10,11 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/data/binding"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/storage"
+	"fyne.io/fyne/v2/widget"
+	"github.com/ch3mz-za/SCUtil/internal/scu"
 	"github.com/skratchdot/open-golang/open"
 )
 
@@ -189,4 +192,48 @@ func showImage(f fyne.URIReadCloser) {
 	w.SetContent(container.NewScroll(img))
 	w.Resize(fyne.NewSize(1024, 720))
 	w.Show()
+}
+
+// newGameVersionSelect creates a Select widget that automatically updates
+// when the game directory changes. The onChange callback is optional.
+func newGameVersionSelect(onChange func(string)) *widget.Select {
+	sel := widget.NewSelect(scu.GetGameVersions(), onChange)
+
+	// Add a listener to refresh version options when game directory changes
+	gameDirBind.AddListener(binding.NewDataListener(func() {
+		versions := scu.GetGameVersions()
+		sel.Options = versions
+
+		// If the current selection is not in the new options, clear it
+		if sel.Selected != "" {
+			found := false
+			for _, v := range versions {
+				if v == sel.Selected {
+					found = true
+					break
+				}
+			}
+			if !found {
+				sel.Selected = ""
+			}
+		}
+
+		// Auto-select LIVE if available
+		if sel.Selected == "" && len(versions) > 0 {
+			for _, v := range versions {
+				if v == scu.GameVerLIVE {
+					sel.SetSelected(scu.GameVerLIVE)
+					break
+				}
+			}
+			// If LIVE not found, select first option
+			if sel.Selected == "" {
+				sel.SetSelected(versions[0])
+			}
+		}
+
+		sel.Refresh()
+	}))
+
+	return sel
 }

@@ -21,3 +21,6 @@ BACKUPS/
 bin/
 P4kResults/
 test/
+
+CLAUDE.md
+AGENTS.md

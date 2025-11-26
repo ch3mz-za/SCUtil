@@ -11,16 +11,26 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
+	"github.com/ch3mz-za/SCUtil/internal/common"
 	"github.com/ch3mz-za/SCUtil/internal/scu"
 )
 
 func restore(win fyne.Window) fyne.CanvasObject {
 	restoreData := binding.BindStringList(&[]string{})
 
-	selectionGameVersion := widget.NewSelect(scu.GetGameVersions(), func(value string) {
-		items, err := scu.GetFilesListFromDir(filepath.Join(scu.AppDir, scu.ControlMappingsBackupDir, value))
+	selectionGameVersion := newGameVersionSelect(func(value string) {
+		if value == "" {
+			return
+		}
+
+		backupDir := filepath.Join(scu.AppDir, scu.ControlMappingsBackupDir, value)
+		if !common.Exists(backupDir) {
+			common.MakeDir(backupDir)
+		}
+
+		items, err := scu.GetFilesListFromDir(backupDir)
 		if err != nil {
-			dialog.ShowError(err, win)
+			return
 		}
 		if err := restoreData.Set(*items); err != nil {
 			dialog.ShowError(err, win)

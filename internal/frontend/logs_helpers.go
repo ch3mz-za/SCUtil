@@ -9,7 +9,6 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/ch3mz-za/SCUtil/internal/logmon"
-	"github.com/ch3mz-za/SCUtil/internal/scu"
 )
 
 // Helper functions for creating rich text segments
@@ -89,5 +88,6 @@ func generateLogName() string {
 }
 
 func getGameLogPath(selectionGameVersion *widget.Select) string {
-	return filepath.Join(scu.GameDir, selectionGameVersion.Selected, "Game.log")
+
+	return filepath.Join(getGameDir(nil), selectionGameVersion.Selected, "Game.log")
 }

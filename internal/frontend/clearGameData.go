@@ -27,8 +27,7 @@ func clearGameData(win fyne.Window) fyne.CanvasObject {
 		clearAlldataExceptP4k,
 	}
 
-	dropDownGameVersion := widget.NewSelect(scu.GetGameVersions(), func(value string) {})
-	dropDownGameVersion.Selected = scu.GameVerLIVE
+	dropDownGameVersion := newGameVersionSelect(nil)
 	dropDownGameVersion.Hidden = true
 
 	checkRemoveControlMappings := widget.NewCheck("Remove control mappings", func(value bool) {})
