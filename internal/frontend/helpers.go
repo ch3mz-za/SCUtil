@@ -5,6 +5,7 @@ import (
 	"io"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -206,13 +207,7 @@ func newGameVersionSelect(onChange func(string)) *widget.Select {
 
 		// If the current selection is not in the new options, clear it
 		if sel.Selected != "" {
-			found := false
-			for _, v := range versions {
-				if v == sel.Selected {
-					found = true
-					break
-				}
-			}
+			found := slices.Contains(versions, sel.Selected)
 			if !found {
 				sel.Selected = ""
 			}
@@ -220,11 +215,8 @@ func newGameVersionSelect(onChange func(string)) *widget.Select {
 
 		// Auto-select LIVE if available
 		if sel.Selected == "" && len(versions) > 0 {
-			for _, v := range versions {
-				if v == scu.GameVerLIVE {
-					sel.SetSelected(scu.GameVerLIVE)
-					break
-				}
+			if slices.Contains(versions, scu.GameVerLIVE) {
+				sel.SetSelected(scu.GameVerLIVE)
 			}
 			// If LIVE not found, select first option
 			if sel.Selected == "" {

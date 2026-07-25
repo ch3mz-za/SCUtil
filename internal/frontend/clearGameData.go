@@ -18,6 +18,7 @@ func clearGameData(win fyne.Window) fyne.CanvasObject {
 		clearUserData           string = "Clear USER data"
 		clearStarCitizenAppData string = "Clear Star Citizen AppData"
 		clearRsiLauncherAppData string = "Clear RSI Launcher AppData"
+		clearEasyAntiCheatData  string = "Clear EasyAntiCheat Data"
 	)
 
 	clearFeatures := []string{
@@ -25,6 +26,7 @@ func clearGameData(win fyne.Window) fyne.CanvasObject {
 		clearRsiLauncherAppData,
 		clearUserData,
 		clearAlldataExceptP4k,
+		clearEasyAntiCheatData,
 	}
 
 	dropDownGameVersion := newGameVersionSelect(nil)
@@ -55,7 +57,7 @@ func clearGameData(win fyne.Window) fyne.CanvasObject {
 		selectedBackupItem = id
 		checkRemoveControlMappings.Hidden = clearFeatures[id] != clearUserData
 		checkRemoveRenderSetting.Hidden = clearFeatures[id] != clearStarCitizenAppData
-		dropDownGameVersion.Hidden = clearFeatures[id] != clearAlldataExceptP4k && clearFeatures[id] != clearUserData
+		dropDownGameVersion.Hidden = clearFeatures[id] != clearAlldataExceptP4k && clearFeatures[id] != clearUserData && clearFeatures[id] != clearEasyAntiCheatData
 	}
 
 	btnClear := widget.NewButton("Clear", func() {
@@ -80,6 +82,11 @@ func clearGameData(win fyne.Window) fyne.CanvasObject {
 		case clearUserData:
 			if err = scu.ClearUserFolder(dropDownGameVersion.Selected, checkRemoveControlMappings.Checked); err == nil {
 				dialog.ShowInformation("Clear USER Data", "data cleared", win)
+			}
+
+		case clearEasyAntiCheatData:
+			if err = scu.ClearEasyAntiCheatFolder(dropDownGameVersion.Selected); err == nil {
+				dialog.ShowInformation("Clear EasyAntiCheat Data", "data cleared", win)
 			}
 
 		default:

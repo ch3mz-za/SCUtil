@@ -179,7 +179,15 @@ func tail(ctx context.Context, cfg *Config, emit func(string)) error {
 			if !os.IsNotExist(err) {
 				return err
 			}
-			time.Sleep(cfg.PollEvery)
+			timer := time.NewTimer(cfg.PollEvery)
+			select {
+			case <-ctx.Done():
+				if !timer.Stop() {
+					<-timer.C
+				}
+				return ctx.Err()
+			case <-timer.C:
+			}
 			f, err = os.Open(cfg.ActivePath)
 			if err == nil {
 				break
@@ -221,7 +229,9 @@ func tail(ctx context.Context, cfg *Config, emit func(string)) error {
 	afterDrain:
 
 		// Rotation/truncation?
-		if isProbablyRotated(f, cfg.ActivePath) {
+		if _, err := f.Stat(); err != nil {
+			reader, f = reopen(cfg.ActivePath, reader, f)
+		} else if isProbablyRotated(f, cfg.ActivePath) {
 			reader, f = reopen(cfg.ActivePath, reader, f)
 		}
 

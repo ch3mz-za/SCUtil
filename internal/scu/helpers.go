@@ -178,7 +178,7 @@ func BackupDirectory(sourceDir, destDir string) error {
 
 func FindGameDirectory(searchDir string) string {
 	gameDir, err := common.FindDir(searchDir, filepath.Join("StarCitizen", GameVerLIVE))
-	if err != nil && gameDir != "" {
+	if err != nil || gameDir == "" {
 		return ""
 	}
 	return filepath.Dir(gameDir)
@@ -207,13 +207,13 @@ func deleteAllFilesWithExclusions(dir string, exclusions ...string) error {
 
 			if !info.IsDir() {
 				for _, ex := range exclusions {
-					if strings.HasSuffix(path, ex) {
+					if filepath.Clean(path) == filepath.Clean(ex) {
 						return nil
 					}
 				}
 
 				if err := os.Remove(path); err != nil {
-					return nil
+					return fmt.Errorf("remove %s: %w", path, err)
 				}
 			}
 

@@ -2,10 +2,7 @@ package p4k
 
 import (
 	"archive/zip"
-	"bufio"
 	"fmt"
-	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -18,12 +15,16 @@ type SearchBorder struct {
 	Stop  int
 }
 
-func searchFilenameWorker(phrase string, r *zip.ReadCloser, border chan SearchBorder, results chan string, wg *sync.WaitGroup) {
+func searchFilenameWorker(phrase string, r *zip.ReadCloser, border <-chan SearchBorder, results chan<- string, stop <-chan struct{}, wg *sync.WaitGroup) {
 	defer wg.Done()
 	for b := range border {
 		for i := b.Start; i < b.Stop; i++ {
 			if strings.Contains(r.File[i].Name, phrase) {
-				results <- r.File[i].Name
+				select {
+				case results <- r.File[i].Name:
+				case <-stop:
+					return
+				}
 			}
 		}
 	}
@@ -37,24 +38,25 @@ func SearchP4kFilenames(gameDir, phrase, resultsFile string) error {
 	}
 	defer r.Close()
 
+	div := runtime.NumCPU()
 	results := make(chan string)
-	borders := make(chan SearchBorder)
-	resultsDone := make(chan bool, 1)
-	defer close(resultsDone)
+	borders := make(chan SearchBorder, div)
+	writerDone := make(chan struct{})
+	stop := make(chan struct{})
 
-	go WriteStringsToFile(resultsFile, results, resultsDone)
+	writerErr := make(chan error, 1)
+	go WriteStringsToFile(resultsFile, results, writerDone, writerErr, stop)
 
 	var wg sync.WaitGroup
-	div := runtime.NumCPU()
-	for i := 0; i < div; i++ {
+	for range div {
 		wg.Add(1)
-		go searchFilenameWorker(phrase, r, borders, results, &wg)
+		go searchFilenameWorker(phrase, r, borders, results, stop, &wg)
 	}
 
 	fileCount := len(r.File)
 	if fileCount > 1000 {
 		interval := fileCount / div
-		for i := 0; i < div; i++ {
+		for i := range div {
 			if i == div-1 {
 				borders <- SearchBorder{Start: interval * i, Stop: fileCount}
 			} else {
@@ -71,43 +73,31 @@ func SearchP4kFilenames(gameDir, phrase, resultsFile string) error {
 		close(results)
 	}()
 
-	<-resultsDone
+	<-writerDone
+	select {
+	case err := <-writerErr:
+		return err
+	default:
+		return nil
+	}
 
-	return nil
 }
 
-func findInFile(phrase, filePath string, resultsChan chan string) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-
-	fr := bufio.NewReader(file)
-	for {
-		line, _, err := fr.ReadLine()
-		if err == io.EOF {
-			return
-		}
-
-		if strings.Contains(string(line), phrase) {
-			resultsChan <- string(line)
-		}
-	}
-}
-
-func WriteStringsToFile(filename string, results chan string, done chan bool) {
+func WriteStringsToFile(filename string, results <-chan string, done chan<- struct{}, errCh chan<- error, stop chan<- struct{}) {
+	defer close(done)
 	file, err := os.Create(filename)
 	if err != nil {
+		errCh <- fmt.Errorf("create search results file: %w", err)
+		close(stop)
 		return
 	}
 	defer file.Close()
 
 	for r := range results {
 		if _, err = file.WriteString(r + "\n"); err != nil {
-			continue
+			errCh <- fmt.Errorf("write search results file: %w", err)
+			close(stop)
+			return
 		}
 	}
-
-	done <- true
 }

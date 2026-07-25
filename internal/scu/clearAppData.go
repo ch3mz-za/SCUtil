@@ -2,6 +2,7 @@ package scu
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -11,7 +12,10 @@ import (
 // ClearStarCitizenAppData - Clears the game's date within AppData
 func ClearStarCitizenAppData(enableExclusions bool) error {
 	scAppDataDir := filepath.Join(common.UserHomeDir(), "AppData", "Local", "Star Citizen")
-	files, _ := common.ListAllFilesAndDirs(scAppDataDir)
+	files, err := common.ListAllFilesAndDirs(scAppDataDir)
+	if err != nil {
+		return fmt.Errorf("list Star Citizen AppData: %w", err)
+	}
 
 	var exclusion []string
 	if enableExclusions {
@@ -44,4 +48,16 @@ func ClearRsiLauncherAppData() *[]string {
 		}
 	}
 	return &filesRemoved
+}
+
+func ClearEasyAntiCheatAppData() error {
+	// EasyAntiCheat AppData
+	easyAntiCheatDir := filepath.Join(common.UserHomeDir(), "AppData", "Roaming", "EasyAntiCheat")
+	if common.Exists(easyAntiCheatDir) {
+		if err := os.RemoveAll(easyAntiCheatDir); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

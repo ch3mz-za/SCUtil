@@ -138,25 +138,22 @@ func startLogParser(
 
 				switch parseOption {
 				case SingleFile, TailFile:
-					state.logItems = append(state.logItems, s)
+					fyne.Do(func() {
+						state.logItems = append(state.logItems, s)
 
-					// Cap memory
-					if len(state.logItems) > logItemLimit {
-						state.logItems = state.logItems[len(state.logItems)-logItemLimit:]
-						// Also cap filtered items if needed
-						if len(state.filteredItems) > logItemLimit {
-							state.filteredItems = state.filteredItems[len(state.filteredItems)-logItemLimit:]
+						if len(state.logItems) > logItemLimit {
+							state.logItems = state.logItems[len(state.logItems)-logItemLimit:]
+							if len(state.filteredItems) > logItemLimit {
+								state.filteredItems = state.filteredItems[len(state.filteredItems)-logItemLimit:]
+							}
 						}
-					}
 
-					// Append to filtered list if this item matches current predicate
-					if filterMatch(s, state.activeFilter, state.activeQuery) {
-						state.filteredItems = append(state.filteredItems, s)
-						fyne.Do(func() {
+						if filterMatch(s, state.activeFilter, state.activeQuery) {
+							state.filteredItems = append(state.filteredItems, s)
 							lvCtx.logList.Refresh()
 							lvCtx.logList.ScrollToBottom()
-						})
-					}
+						}
+					})
 
 				case AggregateFiles:
 					res := parseLogResult(s)
@@ -562,6 +559,9 @@ func stringToLogItem(line string) *logmon.LogItem {
 	}
 
 	fields = strings.Fields(line)
+	if len(fields) <= LogTypeIndex {
+		return nil
+	}
 	switch fields[LogTypeIndex] {
 	case ActorDeath:
 		return &logmon.LogItem{
@@ -597,26 +597,34 @@ func readAggregatedLog(filePath string, lvCtx *logViewCtx, state *logViewerState
 	lvCtx.progressBar.Show()
 
 	// Load all items into memory first (no UI updates during scan)
+	items := make([]*logmon.LogItem, 0, logItemAggregateLimit)
 	s := bufio.NewScanner(f)
 	for s.Scan() {
 		item := stringToLogItem(s.Text())
-		state.logItems = append(state.logItems, item)
+		if item == nil {
+			continue
+		}
+		items = append(items, item)
 
 		// Cap memory
-		if len(state.logItems) > logItemAggregateLimit {
-			state.logItems = state.logItems[len(state.logItems)-logItemAggregateLimit:]
+		if len(items) > logItemAggregateLimit {
+			items = items[len(items)-logItemAggregateLimit:]
 		}
 	}
-
-	// Rebuild filtered list and update UI
-	state.filteredItems = state.filteredItems[:0]
-	for _, it := range state.logItems {
-		if filterMatch(it, state.activeFilter, state.activeQuery) {
-			state.filteredItems = append(state.filteredItems, it)
-		}
+	if err := s.Err(); err != nil {
+		lvCtx.progressBar.Hide()
+		dialog.ShowError(fmt.Errorf("read aggregated log: %w", err), lvCtx.win)
+		return
 	}
 
 	fyne.Do(func() {
+		state.logItems = items
+		state.filteredItems = state.filteredItems[:0]
+		for _, it := range state.logItems {
+			if filterMatch(it, state.activeFilter, state.activeQuery) {
+				state.filteredItems = append(state.filteredItems, it)
+			}
+		}
 		lvCtx.progressBar.Dismiss()
 		lvCtx.logList.Refresh()
 		lvCtx.logList.ScrollToBottom()

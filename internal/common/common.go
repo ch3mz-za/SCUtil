@@ -23,16 +23,17 @@ func CleanInput(input string) string {
 }
 
 func FindDir(root, target string) (string, error) {
-
 	var gamePath string
+	target = filepath.Clean(target)
 	err := filepath.WalkDir(root, func(path string, dir fs.DirEntry, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
 
-		if dir.IsDir() && strings.HasSuffix(path, target) {
+		cleanPath := filepath.Clean(path)
+		if dir.IsDir() && (cleanPath == target || strings.HasSuffix(cleanPath, string(filepath.Separator)+target)) {
 			gamePath = path
-			return nil
+			return fs.SkipDir
 		}
 		return nil
 	})
@@ -51,6 +52,9 @@ func UserHomeDir() string {
 	home := os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
 	if home == "" {
 		home = os.Getenv("USERPROFILE")
+	}
+	if home == "" {
+		home, _ = os.UserHomeDir()
 	}
 	return home
 }
@@ -76,11 +80,8 @@ func CopyFile(src string, dst string) error {
 }
 
 func Exists(path string) bool {
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return false
-	} else {
-		return true
-	}
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 func MakeDir(dir string) {

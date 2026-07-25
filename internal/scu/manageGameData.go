@@ -22,12 +22,12 @@ func ClearUserFolder(version string, exclusionsEnabled bool) error {
 
 			if !info.IsDir() {
 
-				if exclusionsEnabled && strings.HasPrefix(path, exclusion) {
+				if exclusionsEnabled && isWithin(path, exclusion) {
 					return nil
 				}
 
 				if err := os.Remove(path); err != nil {
-					return nil
+					return fmt.Errorf("remove %s: %w", path, err)
 				}
 			}
 			return nil
@@ -53,9 +53,24 @@ func ClearAllDataExceptP4k(version string) error {
 		}
 		filePath := filepath.Join(gameDir, f.Name())
 
-		err := os.RemoveAll(filePath)
-		if err != nil {
-			continue
+		if err := os.RemoveAll(filePath); err != nil {
+			return fmt.Errorf("remove %s: %w", filePath, err)
+		}
+	}
+	return nil
+}
+
+func isWithin(path, root string) bool {
+	rel, err := filepath.Rel(filepath.Clean(root), filepath.Clean(path))
+	return err == nil && rel != "." && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
+// ClearEasyAntiCheatFolder - Clears the EasyAntiCheat folder for the specified version
+func ClearEasyAntiCheatFolder(version string) error {
+	easyAntiCheatDir := filepath.Join(GetGameDir(), version, "EasyAntiCheat")
+	if common.Exists(easyAntiCheatDir) {
+		if err := os.RemoveAll(easyAntiCheatDir); err != nil {
+			return err
 		}
 	}
 	return nil

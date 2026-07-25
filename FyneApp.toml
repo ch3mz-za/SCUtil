@@ -4,5 +4,5 @@ Website = "https://ch3mz.tech"
   Icon = "resources/scutilv2.png"
   Name = "SCUtil"
   ID = "com.scutil.app"
-  Version = "2.8.0"
-  Build = 11
+  Version = "2.9.0"
+  Build = 12
